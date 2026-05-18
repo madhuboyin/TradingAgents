@@ -10,6 +10,7 @@ import {
   PanelLeftOpen,
   Target,
   TrendingUp,
+  X,
 } from 'lucide-react';
 
 const SURFACE = {
@@ -54,6 +55,14 @@ const parseDecisionHeadline = (content) => {
     .find(Boolean);
 
   return firstMeaningfulLine || 'No decision yet';
+};
+
+const getRatingColor = (headline) => {
+  const text = (headline || '').toLowerCase();
+  if (text.includes('sell')) return SURFACE.red;
+  if (text.includes('buy') || text.includes('overweight')) return SURFACE.green;
+  if (text.includes('hold') || text.includes('underweight')) return SURFACE.amber;
+  return SURFACE.textMuted;
 };
 
 const MarkdownContent = ({ content, emptyMessage = 'No data available' }) => {
@@ -327,6 +336,122 @@ const EmptyState = ({ title, body }) => (
   </div>
 );
 
+const StatusBanner = ({ items }) => (
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'stretch',
+      marginTop: '16px',
+      background: SURFACE.panel,
+      border: `1px solid ${SURFACE.border}`,
+      borderRadius: '12px',
+      overflow: 'hidden',
+    }}
+  >
+    {items.map((item, i) => (
+      <div
+        key={item.label}
+        style={{
+          flex: 1,
+          padding: '10px 14px',
+          borderRight: i < items.length - 1 ? `1px solid ${SURFACE.border}` : 'none',
+          minWidth: 0,
+        }}
+      >
+        <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', color: SURFACE.textSubtle, fontWeight: 700, marginBottom: '3px' }}>
+          {item.label}
+        </div>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: item.tone, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {item.value}
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const AgentInspectorPanel = ({ agent, onClose }) => {
+  React.useEffect(() => {
+    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(0,0,0,0.4)',
+          backdropFilter: 'blur(2px)',
+          zIndex: 40,
+          cursor: 'pointer',
+        }}
+      />
+      <div
+        style={{
+          position: 'fixed', right: 0, top: 0,
+          height: '100vh', width: '360px',
+          background: SURFACE.panel,
+          borderLeft: `1px solid ${SURFACE.borderStrong}`,
+          zIndex: 50,
+          overflowY: 'auto',
+          display: 'flex', flexDirection: 'column',
+          boxShadow: '-12px 0 40px rgba(0,0,0,0.5)',
+          animation: 'slideInRight 0.25s cubic-bezier(0.4,0,0.2,1)',
+        }}
+      >
+        <div style={{
+          padding: '20px 20px 16px',
+          borderBottom: `1px solid ${SURFACE.border}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: SURFACE.panelAlt,
+          flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <TrendingUp size={16} color={SURFACE.amber} />
+            <span style={{ fontSize: '11px', fontWeight: 700, color: SURFACE.textSubtle, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Agent Inspector
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              color: SURFACE.textMuted, padding: '6px', borderRadius: '8px',
+              display: 'flex', alignItems: 'center',
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ background: SURFACE.panelAlt, border: `1px solid ${SURFACE.borderStrong}`, borderRadius: '14px', padding: '16px' }}>
+            <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: SURFACE.textSubtle, fontWeight: 700, marginBottom: '8px' }}>
+              Selected agent
+            </div>
+            <div style={{ fontSize: '20px', fontWeight: 800, marginBottom: '10px' }}>{agent.label}</div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '999px', background: 'rgba(59,130,246,0.12)', color: SURFACE.blueSoft, fontSize: '12px', fontWeight: 700 }}>
+              <span>●</span>
+              {agent.status || 'Waiting'}
+            </div>
+          </div>
+          <div style={{ fontSize: '13px', color: SURFACE.textMuted, lineHeight: 1.7 }}>{agent.description}</div>
+          <div style={{ background: SURFACE.panelAlt, border: `1px solid ${SURFACE.border}`, borderRadius: '14px', padding: '14px' }}>
+            <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: SURFACE.textSubtle, fontWeight: 700, marginBottom: '8px' }}>
+              Why this matters
+            </div>
+            <div style={{ fontSize: '13px', color: SURFACE.textMuted, lineHeight: 1.7 }}>
+              This panel stays visible while you scan the graph, so you do not need to hover repeatedly to remember each stage's purpose.
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
 const App = () => {
   const [runs, setRuns] = useState([]);
   const [stats, setStats] = useState(null);
@@ -357,6 +482,15 @@ const App = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Auto-expand workflow when a live analysis starts; collapse when browsing history.
+  useEffect(() => {
+    if (activeRunId) setIsWorkflowCollapsed(false);
+  }, [activeRunId]);
+
+  useEffect(() => {
+    setIsWorkflowCollapsed(true);
+  }, [selectedRun]);
 
   useEffect(() => {
     if (!notification) return undefined;
@@ -615,6 +749,9 @@ const App = () => {
         ? SURFACE.green
         : SURFACE.blue
     : SURFACE.green;
+
+  const decisionHeadline = parseDecisionHeadline(currentDecision);
+  const ratingColor = getRatingColor(decisionHeadline);
 
   const summaryMetrics = [
     {
@@ -955,18 +1092,13 @@ const App = () => {
             )}
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: isCompact ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))',
-              gap: '14px',
-              marginTop: '20px',
-            }}
-          >
-            {summaryMetrics.map((metric) => (
-              <SummaryMetric key={metric.label} {...metric} />
-            ))}
-          </div>
+          <StatusBanner items={[
+            { label: 'Status', value: formatStatusLabel(activeStatus?.status || 'completed'), tone: statusTone },
+            { label: 'Decision', value: decisionHeadline, tone: ratingColor },
+            { label: 'Horizon', value: formatInvestmentHorizon(currentHorizon), tone: SURFACE.purple },
+            { label: 'Current Step', value: activeStatus && activeStatus.status !== 'completed' ? activeStep : selectedAgent?.label || 'Review decision', tone: SURFACE.amber },
+            { label: elapsed ? 'Runtime' : 'History', value: elapsed || `${runs.length} runs`, tone: SURFACE.textMuted },
+          ]} />
 
           {activeStatus && activeStatus.status !== 'error' && activeStatus.status !== 'completed' && (
             <div style={{ marginTop: '18px' }}>
@@ -990,6 +1122,11 @@ const App = () => {
             0% { transform: translateX(-100%); }
             100% { transform: translateX(100%); }
           }
+
+          @keyframes slideInRight {
+            from { transform: translateX(100%); }
+            to   { transform: translateX(0); }
+          }
         `}</style>
 
         <main style={{ flex: 1, overflowY: 'auto', padding: isNarrow ? '16px' : '24px' }}>
@@ -999,76 +1136,27 @@ const App = () => {
             <EmptyState title="No analysis selected" body="Choose a recent run from the sidebar or trigger a fresh analysis to populate the dashboard." />
           ) : (
             <>
-              {isWorkflowCollapsed ? (
-                <SectionCard
-                  title="Workflow overview"
-                  subtitle="Follow the analysis path and click any node to inspect what that agent contributes."
-                  icon={Layout}
-                  collapsible
-                  collapsed={isWorkflowCollapsed}
-                  onToggleCollapse={() => setIsWorkflowCollapsed((current) => !current)}
+              <SectionCard
+                title="Workflow overview"
+                subtitle="Follow the analysis path and click any node to inspect what that agent contributes."
+                icon={Layout}
+                collapsible
+                collapsed={isWorkflowCollapsed}
+                onToggleCollapse={() => setIsWorkflowCollapsed((c) => !c)}
+              >
+                <FlowGraph
+                  runData={runDetail}
+                  activeStatus={activeStatus}
+                  onNodeClick={setSelectedAgent}
+                  selectedAgentId={selectedAgent?.id}
                 />
-              ) : (
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: isCompact ? '1fr' : 'minmax(0, 2fr) minmax(320px, 0.95fr)',
-                    gap: '20px',
-                    alignItems: 'start',
-                  }}
-                >
-                  <SectionCard
-                    title="Workflow overview"
-                    subtitle="Follow the analysis path and click any node to inspect what that agent contributes."
-                    icon={Layout}
-                    collapsible
-                    collapsed={isWorkflowCollapsed}
-                    onToggleCollapse={() => setIsWorkflowCollapsed((current) => !current)}
-                  >
-                    <FlowGraph
-                      runData={runDetail}
-                      activeStatus={activeStatus}
-                      onNodeClick={setSelectedAgent}
-                      selectedAgentId={selectedAgent?.id}
-                    />
-                  </SectionCard>
+              </SectionCard>
 
-                  <SectionCard
-                    title="Agent inspector"
-                    subtitle={selectedAgent ? 'Persistent context for the selected node.' : 'Select any node to keep its purpose visible while you review the run.'}
-                    icon={TrendingUp}
-                    accent={SURFACE.amber}
-                  >
-                    {selectedAgent ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        <div style={{ background: SURFACE.panelAlt, border: `1px solid ${SURFACE.borderStrong}`, borderRadius: '14px', padding: '16px' }}>
-                          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: SURFACE.textSubtle, fontWeight: 700, marginBottom: '8px' }}>
-                            Selected agent
-                          </div>
-                          <div style={{ fontSize: '20px', fontWeight: 800, marginBottom: '8px' }}>{selectedAgent.label}</div>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '999px', background: 'rgba(59, 130, 246, 0.12)', color: SURFACE.blueSoft, fontSize: '12px', fontWeight: 700 }}>
-                            <span>●</span>
-                            {selectedAgent.status || 'Waiting'}
-                          </div>
-                        </div>
-                        <div style={{ fontSize: '13px', color: SURFACE.textMuted, lineHeight: 1.7 }}>{selectedAgent.description}</div>
-                        <div style={{ background: SURFACE.panelAlt, border: `1px solid ${SURFACE.border}`, borderRadius: '14px', padding: '14px' }}>
-                          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: SURFACE.textSubtle, fontWeight: 700, marginBottom: '8px' }}>
-                            Why this matters
-                          </div>
-                          <div style={{ fontSize: '13px', color: SURFACE.textMuted, lineHeight: 1.7 }}>
-                            This panel stays visible while you scan the graph, so you do not need to hover repeatedly to remember each stage’s purpose.
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <EmptyState
-                        title="No node selected"
-                        body="The graph now supports click-to-inspect. Pick any analyst, researcher, or manager node to keep its role pinned here while you review the output."
-                      />
-                    )}
-                  </SectionCard>
-                </div>
+              {selectedAgent && (
+                <AgentInspectorPanel
+                  agent={selectedAgent}
+                  onClose={() => setSelectedAgent(null)}
+                />
               )}
 
               <div style={{ marginTop: '20px' }}>
@@ -1110,12 +1198,12 @@ const App = () => {
                         gap: '18px',
                       }}
                     >
-                      <div style={{ background: SURFACE.panelAlt, border: `1px solid ${SURFACE.borderStrong}`, borderRadius: '16px', padding: '18px' }}>
+                      <div style={{ background: SURFACE.panelAlt, border: `1px solid ${SURFACE.borderStrong}`, borderLeft: `4px solid ${ratingColor}`, borderRadius: '16px', padding: '18px' }}>
                         <div style={{ fontSize: '11px', color: SURFACE.textSubtle, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '10px' }}>
                           Key takeaway
                         </div>
-                        <div style={{ fontSize: '24px', fontWeight: 800, lineHeight: 1.2, color: SURFACE.blueSoft }}>
-                          {parseDecisionHeadline(currentDecision)}
+                        <div style={{ fontSize: '24px', fontWeight: 800, lineHeight: 1.2, color: ratingColor }}>
+                          {decisionHeadline}
                         </div>
                         <div style={{ fontSize: '13px', color: SURFACE.textMuted, lineHeight: 1.7, marginTop: '12px' }}>
                           This is the fastest way to understand the current run before diving into the full explanation.

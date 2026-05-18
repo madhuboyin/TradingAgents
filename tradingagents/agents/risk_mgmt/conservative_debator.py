@@ -1,4 +1,6 @@
 from tradingagents.agents.utils.agent_utils import get_language_instruction
+from tradingagents.agents.utils.prompt_context import tail_text
+from tradingagents.dataflows.config import get_config
 
 
 def create_conservative_debator(llm):
@@ -6,14 +8,14 @@ def create_conservative_debator(llm):
         risk_debate_state = state["risk_debate_state"]
         history = risk_debate_state.get("history", "")
         conservative_history = risk_debate_state.get("conservative_history", "")
+        history_window = tail_text(
+            history,
+            get_config().get("risk_debate_history_max_chars", 4000),
+        )
 
         current_aggressive_response = risk_debate_state.get("current_aggressive_response", "")
         current_neutral_response = risk_debate_state.get("current_neutral_response", "")
-
-        market_research_report = state["market_report"]
-        sentiment_report = state["sentiment_report"]
-        news_report = state["news_report"]
-        fundamentals_report = state["fundamentals_report"]
+        analyst_brief = state.get("analyst_brief", "")
 
         trader_decision = state["trader_investment_plan"]
 
@@ -23,11 +25,9 @@ def create_conservative_debator(llm):
 
 Your task is to actively counter the arguments of the Aggressive and Neutral Analysts, highlighting where their views may overlook potential threats or fail to prioritize sustainability. Respond directly to their points, drawing from the following data sources to build a convincing case for a low-risk approach adjustment to the trader's decision:
 
-Market Research Report: {market_research_report}
-Social Media Sentiment Report: {sentiment_report}
-Latest World Affairs Report: {news_report}
-Company Fundamentals Report: {fundamentals_report}
-Here is the current conversation history: {history} Here is the last response from the aggressive analyst: {current_aggressive_response} Here is the last response from the neutral analyst: {current_neutral_response}. If there are no responses from the other viewpoints yet, present your own argument based on the available data.
+Analyst Brief:
+{analyst_brief}
+Here is the current conversation history: {history_window} Here is the last response from the aggressive analyst: {current_aggressive_response} Here is the last response from the neutral analyst: {current_neutral_response}. If there are no responses from the other viewpoints yet, present your own argument based on the available data.
 
 Engage by questioning their optimism and emphasizing the potential downsides they may have overlooked. Address each of their counterpoints to showcase why a conservative stance is ultimately the safest path for the firm's assets. Focus on debating and critiquing their arguments to demonstrate the strength of a low-risk strategy over their approaches. Output conversationally as if you are speaking without any special formatting.""" + get_language_instruction()
 

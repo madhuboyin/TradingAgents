@@ -7,10 +7,12 @@ from tradingagents.agents.utils.agent_utils import (
     build_instrument_context,
     get_language_instruction,
 )
+from tradingagents.agents.utils.prompt_context import tail_text
 from tradingagents.agents.utils.structured import (
     bind_structured,
     invoke_structured_or_freetext,
 )
+from tradingagents.dataflows.config import get_config
 
 
 def create_research_manager(llm):
@@ -18,7 +20,10 @@ def create_research_manager(llm):
 
     def research_manager_node(state) -> dict:
         instrument_context = build_instrument_context(state["company_of_interest"])
-        history = state["investment_debate_state"].get("history", "")
+        history = tail_text(
+            state["investment_debate_state"].get("history", ""),
+            get_config().get("investment_debate_history_max_chars", 4000),
+        )
 
         investment_debate_state = state["investment_debate_state"]
 

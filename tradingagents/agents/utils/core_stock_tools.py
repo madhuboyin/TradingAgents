@@ -1,6 +1,12 @@
 from langchain_core.tools import tool
 from typing import Annotated
+import functools
 from tradingagents.dataflows.interface import route_to_vendor
+
+
+@functools.lru_cache(maxsize=256)
+def _cached_stock_data(symbol: str, start_date: str, end_date: str) -> str:
+    return route_to_vendor("get_stock_data", symbol, start_date, end_date)
 
 
 @tool
@@ -19,4 +25,4 @@ def get_stock_data(
     Returns:
         str: A formatted dataframe containing the stock price data for the specified ticker symbol in the specified date range.
     """
-    return route_to_vendor("get_stock_data", symbol, start_date, end_date)
+    return _cached_stock_data(symbol, start_date, end_date)

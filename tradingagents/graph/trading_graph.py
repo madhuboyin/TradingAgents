@@ -177,6 +177,9 @@ class TradingAgentsGraph:
             self.tool_nodes,
             self.conditional_logic,
         )
+        self.graph_setup.analyst_brief_max_chars = self.config.get(
+            "analyst_brief_max_chars_per_report", 1200
+        )
 
         self.propagator = Propagator(
             max_recur_limit=self.config.get("max_recur_limit", 100),

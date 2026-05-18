@@ -15,10 +15,12 @@ from tradingagents.agents.utils.agent_utils import (
     build_instrument_context,
     get_language_instruction,
 )
+from tradingagents.agents.utils.prompt_context import tail_text, truncate_text
 from tradingagents.agents.utils.structured import (
     bind_structured,
     invoke_structured_or_freetext,
 )
+from tradingagents.dataflows.config import get_config
 
 
 def create_portfolio_manager(llm):
@@ -26,13 +28,20 @@ def create_portfolio_manager(llm):
 
     def portfolio_manager_node(state) -> dict:
         instrument_context = build_instrument_context(state["company_of_interest"])
+        config = get_config()
 
-        history = state["risk_debate_state"]["history"]
+        history = tail_text(
+            state["risk_debate_state"]["history"],
+            config.get("risk_debate_history_max_chars", 4000),
+        )
         risk_debate_state = state["risk_debate_state"]
         research_plan = state["investment_plan"]
         trader_plan = state["trader_investment_plan"]
 
-        past_context = state.get("past_context", "")
+        past_context = truncate_text(
+            state.get("past_context", ""),
+            config.get("past_context_max_chars", 2500),
+        )
         lessons_line = (
             f"- Lessons from prior decisions and outcomes:\n{past_context}\n"
             if past_context

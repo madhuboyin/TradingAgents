@@ -80,6 +80,11 @@ DEFAULT_CONFIG = _apply_env_overrides({
     "max_risk_discuss_rounds": 1,
     "max_recur_limit": 100,
     "portfolio_max_concurrency": 2,
+    # Prompt compaction controls for downstream LLM stages.
+    "analyst_brief_max_chars_per_report": 1200,
+    "investment_debate_history_max_chars": 4000,
+    "risk_debate_history_max_chars": 4000,
+    "past_context_max_chars": 2500,
     # External data fetch controls
     "yfinance_max_retries": 1,
     "yfinance_base_delay_seconds": 1.0,

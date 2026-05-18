@@ -7,6 +7,7 @@ from langgraph.prebuilt import ToolNode
 
 from tradingagents.agents import *
 from tradingagents.agents.utils.agent_states import AgentState
+from tradingagents.agents.utils.prompt_context import build_analyst_brief
 
 from .conditional_logic import ConditionalLogic
 
@@ -26,6 +27,7 @@ class GraphSetup:
         self.deep_thinking_llm = deep_thinking_llm
         self.tool_nodes = tool_nodes
         self.conditional_logic = conditional_logic
+        self.analyst_brief_max_chars = 1200
 
     def setup_graph(
         self,
@@ -115,29 +117,22 @@ class GraphSetup:
             if state["analyst_count"] < len(selected_analysts):
                 return {}
 
-            reports = []
-            max_report_len = 4000
-            
-            def truncate(text):
-                if not text: return ""
-                if len(text) <= max_report_len: return text
-                return text[:max_report_len] + "\n... (truncated for brevity) ..."
+            analyst_brief = build_analyst_brief(
+                [
+                    ("Market Analysis", state.get("market_report", "")),
+                    ("Sentiment Analysis", state.get("sentiment_report", "")),
+                    ("News Analysis", state.get("news_report", "")),
+                    ("Fundamentals Analysis", state.get("fundamentals_report", "")),
+                ],
+                max_chars_per_section=self.analyst_brief_max_chars,
+            )
 
-            if state.get("market_report"):
-                reports.append(f"## Market Analysis\n{truncate(state['market_report'])}")
-            if state.get("sentiment_report"):
-                reports.append(f"## Sentiment Analysis\n{truncate(state['sentiment_report'])}")
-            if state.get("news_report"):
-                reports.append(f"## News Analysis\n{truncate(state['news_report'])}")
-            if state.get("fundamentals_report"):
-                reports.append(f"## Fundamentals Analysis\n{truncate(state['fundamentals_report'])}")
-            
-            if not reports:
+            if not analyst_brief:
                 return {}
-                
-            combined_reports = "\n\n".join(reports)
+
             return {
-                "messages": [HumanMessage(content=f"Here are the completed analyst reports:\n\n{combined_reports}")]
+                "analyst_brief": analyst_brief,
+                "messages": [HumanMessage(content=f"Here are the completed analyst reports:\n\n{analyst_brief}")],
             }
 
         workflow.add_node("Analyst Synchronizer", sync_analysts)

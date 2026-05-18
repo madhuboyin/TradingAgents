@@ -58,6 +58,7 @@ class AgentState(MessagesState):
         str, "Report from the News Researcher of current world affairs"
     ]
     fundamentals_report: Annotated[str, "Report from the Fundamentals Researcher"]
+    analyst_brief: Annotated[str, "Compact downstream brief synthesized from analyst reports"]
 
     # analyst-specific message histories for parallelization safety
     market_messages: Annotated[list, add_messages]

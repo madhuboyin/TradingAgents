@@ -27,7 +27,7 @@ class GraphSetup:
         self.deep_thinking_llm = deep_thinking_llm
         self.tool_nodes = tool_nodes
         self.conditional_logic = conditional_logic
-        self.analyst_brief_max_chars = 1200
+        self.analyst_brief_max_chars = 1600
 
     def setup_graph(
         self,
@@ -110,8 +110,8 @@ class GraphSetup:
         def sync_analysts(state: AgentState):
             """Merge parallel analyst reports into the main message history.
             
-            Reports are truncated to 4k characters each to prevent researchers 
-            from being overwhelmed by excessive context.
+            Reports are compacted to a bounded size so downstream decision
+            stages keep enough nuance without ballooning prompt cost.
             """
             # Gate: Only merge when all analysts have finished.
             if state["analyst_count"] < len(selected_analysts):

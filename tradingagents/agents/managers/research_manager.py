@@ -50,6 +50,7 @@ In your synthesis:
 - explain why the recommendation is not more bullish and not more bearish
 - ground every conclusion in specific data points, metrics, or concrete analyst arguments
 - give the trader practical actions and monitoring triggers, not generic platitudes
+- avoid collapsing the debate into a single talking point; preserve the material tension between the strongest bullish and bearish evidence
 
 ---
 

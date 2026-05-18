@@ -35,6 +35,8 @@ def create_trader(llm):
                     "Based on your analysis, provide a specific recommendation to buy, sell, or hold. "
                     "Anchor your reasoning in the analysts' reports and the research plan. "
                     "Reference specific data points, price levels, and financial metrics from the reports to justify the recommendation. "
+                    "Reflect both the evidence supporting the action and the strongest counterarguments. "
+                    "Explain why the action is not more aggressive and not more conservative, and avoid generic or one-note reasoning. "
                     f"{horizon_prompt}"
                     + get_language_instruction()
                 ),

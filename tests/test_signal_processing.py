@@ -39,7 +39,11 @@ class TestParseRating:
         text = (
             "**Rating**: Buy\n\n"
             "**Executive Summary**: Enter at $189-192, 6% portfolio cap.\n\n"
-            "**Investment Thesis**: AI capex cycle intact; institutional flows constructive."
+            "**Investment Thesis**: AI capex cycle intact; institutional flows constructive.\n\n"
+            "**Recommendation Rationale**: Balanced evidence still favors the long side.\n\n"
+            "**Strategic Actions**: Scale in gradually and watch support.\n\n"
+            "**Key Risks**: Margin compression and weak guidance.\n\n"
+            "**Key Catalysts**: Upcoming earnings and order-book updates."
         )
         assert parse_rating(text) == "Buy"
 

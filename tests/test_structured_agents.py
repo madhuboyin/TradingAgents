@@ -104,7 +104,14 @@ class TestRenderResearchPlan:
 def _make_trader_state():
     return {
         "company_of_interest": "NVDA",
-        "investment_plan": "**Recommendation**: Buy\n**Rationale**: ...\n**Strategic Actions**: ...",
+        "investment_plan": (
+            "**Recommendation**: Buy\n"
+            "**Bull Case Summary**: Demand remains durable.\n"
+            "**Bear Case Summary**: Valuation is elevated.\n"
+            "**Why This Rating**: Bull case wins, but not enough for maximum aggression.\n"
+            "**Strategic Actions**: Scale in.\n"
+            "**Monitoring Triggers**: Watch earnings."
+        ),
     }
 
 
@@ -155,6 +162,17 @@ class TestTraderAgent:
         # The investment plan is in the user message of the captured prompt.
         prompt = captured["prompt"]
         assert any("Proposed Investment Plan" in m["content"] for m in prompt)
+
+    def test_prompt_requests_balanced_non_monotone_reasoning(self):
+        captured = {}
+        llm = _structured_trader_llm(captured)
+        trader = create_trader(llm)
+        trader(_make_trader_state())
+
+        prompt = captured["prompt"]
+        system_prompt = prompt[0]["content"]
+        assert "Reflect both the evidence supporting the action and the strongest counterarguments." in system_prompt
+        assert "avoid generic or one-note reasoning" in system_prompt
 
     def test_falls_back_to_freetext_when_structured_unavailable(self):
         plain_response = (
@@ -273,6 +291,7 @@ class TestResearchManagerAgent:
         prompt = captured["prompt"]
         assert "capture the best bullish evidence separately" in prompt
         assert "why the recommendation is not more bullish and not more bearish" in prompt
+        assert "avoid collapsing the debate into a single talking point" in prompt
 
     def test_prompt_includes_horizon_guidance(self):
         captured = {}

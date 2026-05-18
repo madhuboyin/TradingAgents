@@ -78,6 +78,7 @@ In your synthesis:
 - explain why the final rating is not more bullish and not more bearish
 - distinguish between business quality, financial profile, valuation, technical setup, and timing where relevant
 - provide concrete strategic actions and monitoring conditions rather than generic advice
+- avoid flattening the recommendation into a single risk-off or risk-on narrative when the evidence is mixed; preserve the key tensions explicitly
 
 Be decisive and ground every conclusion in specific evidence from the analysts.{get_language_instruction()}"""
 

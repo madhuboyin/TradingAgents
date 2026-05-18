@@ -1,5 +1,5 @@
 from tradingagents.agents.utils.agent_utils import get_language_instruction
-from tradingagents.agents.utils.prompt_context import tail_text
+from tradingagents.agents.utils.prompt_context import get_horizon_prompt, tail_text
 from tradingagents.dataflows.config import get_config
 
 
@@ -16,6 +16,7 @@ def create_conservative_debator(llm):
         current_aggressive_response = risk_debate_state.get("current_aggressive_response", "")
         current_neutral_response = risk_debate_state.get("current_neutral_response", "")
         analyst_brief = state.get("analyst_brief", "")
+        horizon_prompt = get_horizon_prompt(state.get("investment_horizon"), role="risk")
 
         trader_decision = state["trader_investment_plan"]
 
@@ -29,7 +30,7 @@ Analyst Brief:
 {analyst_brief}
 Here is the current conversation history: {history_window} Here is the last response from the aggressive analyst: {current_aggressive_response} Here is the last response from the neutral analyst: {current_neutral_response}. If there are no responses from the other viewpoints yet, present your own argument based on the available data.
 
-Engage by questioning their optimism and emphasizing the potential downsides they may have overlooked. Address each of their counterpoints to showcase why a conservative stance is ultimately the safest path for the firm's assets. Focus on debating and critiquing their arguments to demonstrate the strength of a low-risk strategy over their approaches. Output conversationally as if you are speaking without any special formatting.""" + get_language_instruction()
+Engage by questioning their optimism and emphasizing the potential downsides they may have overlooked. Address each of their counterpoints to showcase why a conservative stance is ultimately the safest path for the firm's assets. Focus on debating and critiquing their arguments to demonstrate the strength of a low-risk strategy over their approaches. {horizon_prompt} Output conversationally as if you are speaking without any special formatting.""" + get_language_instruction()
 
         response = llm.invoke(prompt)
 

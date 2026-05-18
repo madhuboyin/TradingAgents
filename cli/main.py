@@ -45,6 +45,7 @@ def _build_portfolio_config(
     checkpoint: bool,
     standalone: bool,
     run_id: Optional[str],
+    investment_horizon: Optional[str] = None,
 ) -> dict:
     """Build a per-ticker config dict for headless portfolio runs."""
     config = DEFAULT_CONFIG.copy()
@@ -52,6 +53,8 @@ def _build_portfolio_config(
         config["llm_provider"] = provider.lower()
     config["checkpoint_enabled"] = checkpoint
     config["standalone"] = standalone
+    if investment_horizon:
+        config["investment_horizon"] = investment_horizon
     if run_id:
         config["run_id"] = run_id
     return config
@@ -65,11 +68,18 @@ def _process_portfolio_ticker(
     checkpoint: bool,
     standalone: bool,
     run_id: Optional[str],
+    investment_horizon: Optional[str],
 ) -> dict:
     """Execute a single ticker analysis for a portfolio run."""
-    config = _build_portfolio_config(provider, checkpoint, standalone, run_id)
+    config = _build_portfolio_config(
+        provider,
+        checkpoint,
+        standalone,
+        run_id,
+        investment_horizon=investment_horizon,
+    )
     graph = TradingAgentsGraph(selected_analysts=selected_analysts, config=config)
-    final_state, decision = graph.propagate(ticker, date)
+    final_state, decision = graph.propagate(ticker, date, investment_horizon=investment_horizon)
 
     results_dir = Path(config["results_dir"]) / ticker / date
     save_report_to_disk(final_state, ticker, results_dir / "reports")
@@ -570,10 +580,20 @@ def get_user_selections():
     )
     output_language = ask_output_language()
 
-    # Step 4: Select analysts
+    # Step 4: Investment horizon
     console.print(
         create_question_box(
-            "Step 4: Analysts Team", "Select your LLM analyst agents for the analysis"
+            "Step 4: Investment Horizon",
+            "Select the target holding period for the recommendation",
+            "Short term (<1 year)",
+        )
+    )
+    investment_horizon = select_investment_horizon()
+
+    # Step 5: Select analysts
+    console.print(
+        create_question_box(
+            "Step 5: Analysts Team", "Select your LLM analyst agents for the analysis"
         )
     )
     selected_analysts = select_analysts()
@@ -581,18 +601,18 @@ def get_user_selections():
         f"[green]Selected analysts:[/green] {', '.join(analyst.value for analyst in selected_analysts)}"
     )
 
-    # Step 5: Research depth
+    # Step 6: Research depth
     console.print(
         create_question_box(
-            "Step 5: Research Depth", "Select your research depth level"
+            "Step 6: Research Depth", "Select your research depth level"
         )
     )
     selected_research_depth = select_research_depth()
 
-    # Step 6: LLM Provider
+    # Step 7: LLM Provider
     console.print(
         create_question_box(
-            "Step 6: LLM Provider", "Select your LLM provider"
+            "Step 7: LLM Provider", "Select your LLM provider"
         )
     )
     selected_llm_provider, backend_url = select_llm_provider()
@@ -617,16 +637,16 @@ def get_user_selections():
     # doesn't fail later at the first API call.
     ensure_api_key(selected_llm_provider)
 
-    # Step 7: Thinking agents
+    # Step 8: Thinking agents
     console.print(
         create_question_box(
-            "Step 7: Thinking Agents", "Select your thinking agents for analysis"
+            "Step 8: Thinking Agents", "Select your thinking agents for analysis"
         )
     )
     selected_shallow_thinker = select_shallow_thinking_agent(selected_llm_provider)
     selected_deep_thinker = select_deep_thinking_agent(selected_llm_provider)
 
-    # Step 8: Provider-specific thinking configuration
+    # Step 9: Provider-specific thinking configuration
     thinking_level = None
     reasoning_effort = None
     anthropic_effort = None
@@ -635,7 +655,7 @@ def get_user_selections():
     if provider_lower == "google":
         console.print(
             create_question_box(
-                "Step 8: Thinking Mode",
+                "Step 9: Thinking Mode",
                 "Configure Gemini thinking mode"
             )
         )
@@ -643,7 +663,7 @@ def get_user_selections():
     elif provider_lower == "openai":
         console.print(
             create_question_box(
-                "Step 8: Reasoning Effort",
+                "Step 9: Reasoning Effort",
                 "Configure OpenAI reasoning effort level"
             )
         )
@@ -651,7 +671,7 @@ def get_user_selections():
     elif provider_lower == "anthropic":
         console.print(
             create_question_box(
-                "Step 8: Effort Level",
+                "Step 9: Effort Level",
                 "Configure Claude effort level"
             )
         )
@@ -660,6 +680,7 @@ def get_user_selections():
     return {
         "ticker": selected_ticker,
         "analysis_date": analysis_date,
+        "investment_horizon": investment_horizon,
         "analysts": selected_analysts,
         "research_depth": selected_research_depth,
         "llm_provider": selected_llm_provider.lower(),
@@ -671,6 +692,24 @@ def get_user_selections():
         "anthropic_effort": anthropic_effort,
         "output_language": output_language,
     }
+
+
+def select_investment_horizon():
+    selected = questionary.select(
+        "Select investment horizon:",
+        choices=[
+            "Short term (<1 year)",
+            "Medium term (1-2 years)",
+            "Long term (3-5 years)",
+        ],
+        style=questionary_style,
+    ).ask()
+    mapping = {
+        "Short term (<1 year)": "short_term",
+        "Medium term (1-2 years)": "medium_term",
+        "Long term (3-5 years)": "long_term",
+    }
+    return mapping.get(selected, "short_term")
 
 
 def get_ticker():
@@ -1022,6 +1061,7 @@ def run_analysis(checkpoint: bool = False):
     config["openai_reasoning_effort"] = selections.get("openai_reasoning_effort")
     config["anthropic_effort"] = selections.get("anthropic_effort")
     config["output_language"] = selections.get("output_language", "English")
+    config["investment_horizon"] = selections.get("investment_horizon", "short_term")
     config["checkpoint_enabled"] = checkpoint
 
     # Create stats callback handler for tracking LLM/tool calls
@@ -1106,6 +1146,9 @@ def run_analysis(checkpoint: bool = False):
             "System", f"Analysis date: {selections['analysis_date']}"
         )
         message_buffer.add_message(
+            "System", f"Investment horizon: {selections['investment_horizon']}"
+        )
+        message_buffer.add_message(
             "System",
             f"Selected analysts: {', '.join(analyst.value for analyst in selections['analysts'])}",
         )
@@ -1124,7 +1167,9 @@ def run_analysis(checkpoint: bool = False):
 
         # Initialize state and get graph args with callbacks
         init_agent_state = graph.propagator.create_initial_state(
-            selections["ticker"], selections["analysis_date"]
+            selections["ticker"],
+            selections["analysis_date"],
+            investment_horizon=selections.get("investment_horizon", "short_term"),
         )
         # Pass callbacks to graph config for tool execution tracking
         # (LLM tracking is handled separately via LLM constructor)
@@ -1335,6 +1380,11 @@ def trade(
     standalone: bool = typer.Option(
         False, "--standalone", help="Stop after analyst phase."
     ),
+    investment_horizon: str = typer.Option(
+        "short_term",
+        "--investment-horizon",
+        help="Recommendation horizon: short_term, medium_term, or long_term.",
+    ),
 ):
     """Headless trade execution for CronJobs."""
     if not date:
@@ -1352,6 +1402,7 @@ def trade(
         
     config["checkpoint_enabled"] = checkpoint
     config["standalone"] = standalone
+    config["investment_horizon"] = investment_horizon
     
     selected_analysts = ["market", "social", "news", "fundamentals"]
     if analysts:
@@ -1362,7 +1413,11 @@ def trade(
     
     # Run the analysis
     try:
-        final_state, decision = graph.propagate(ticker, date)
+        final_state, decision = graph.propagate(
+            ticker,
+            date,
+            investment_horizon=investment_horizon,
+        )
         
         if not standalone:
             console.print(f"[bold green]✓ Decision reached: {decision}[/bold green]")
@@ -1386,6 +1441,11 @@ def agent(
     date: Optional[str] = typer.Option(
         None, "--date", help="Analysis date (YYYY-MM-DD). Defaults to today."
     ),
+    investment_horizon: str = typer.Option(
+        "short_term",
+        "--investment-horizon",
+        help="Recommendation horizon: short_term, medium_term, or long_term.",
+    ),
 ):
     """Run a standalone analysis for a specific ticker using one or more agents."""
     if not date:
@@ -1400,11 +1460,16 @@ def agent(
     
     config = DEFAULT_CONFIG.copy()
     config["standalone"] = True
+    config["investment_horizon"] = investment_horizon
     
     graph = TradingAgentsGraph(selected_analysts=analysts, config=config)
     
     try:
-        final_state, _ = graph.propagate(ticker, date)
+        final_state, _ = graph.propagate(
+            ticker,
+            date,
+            investment_horizon=investment_horizon,
+        )
         console.print(f"[bold green]✓ Standalone analysis complete.[/bold green]")
         
         # Display the results
@@ -1452,6 +1517,11 @@ def portfolio(
         "--run-id",
         help="Optional run identifier propagated to dashboard progress updates.",
     ),
+    investment_horizon: str = typer.Option(
+        "short_term",
+        "--investment-horizon",
+        help="Recommendation horizon: short_term, medium_term, or long_term.",
+    ),
 ):
     """Headless trade execution for a list of tickers."""
     if not tickers:
@@ -1497,6 +1567,7 @@ def portfolio(
                 checkpoint,
                 standalone,
                 run_id,
+                investment_horizon,
             ): ticker
             for ticker in ticker_list
         }

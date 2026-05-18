@@ -1,5 +1,5 @@
 from tradingagents.agents.utils.agent_utils import get_language_instruction
-from tradingagents.agents.utils.prompt_context import tail_text
+from tradingagents.agents.utils.prompt_context import get_horizon_prompt, tail_text
 from tradingagents.dataflows.config import get_config
 
 
@@ -15,6 +15,7 @@ def create_bull_researcher(llm):
 
         current_response = investment_debate_state.get("current_response", "")
         analyst_brief = state.get("analyst_brief", "")
+        horizon_prompt = get_horizon_prompt(state.get("investment_horizon"), role="research")
 
         prompt = f"""You are a Bull Analyst advocating for investing in the stock. Your task is to build a strong, evidence-based case emphasizing growth potential, competitive advantages, and positive market indicators. Leverage the provided research and data to address concerns and counter bearish arguments effectively.
 
@@ -31,6 +32,7 @@ Analyst brief:
 Conversation history of the debate: {history_window}
 Last bear argument: {current_response}
 Use this information to deliver a compelling bull argument, refute the bear's concerns, and engage in a dynamic debate that demonstrates the strengths of the bull position.
+{horizon_prompt}
 """ + get_language_instruction()
 
         response = llm.invoke(prompt)

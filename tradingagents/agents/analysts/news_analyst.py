@@ -7,12 +7,14 @@ from tradingagents.agents.utils.agent_utils import (
     get_language_instruction,
     get_news,
 )
+from tradingagents.agents.utils.prompt_context import get_horizon_prompt
 from tradingagents.dataflows.config import get_config
 
 
 def create_news_analyst(llm):
     def _build_chain(state):
         current_date = state["trade_date"]
+        investment_horizon = state.get("investment_horizon", "short_term")
         instrument_context = build_instrument_context(state["company_of_interest"])
 
         tools = [
@@ -22,6 +24,7 @@ def create_news_analyst(llm):
 
         system_message = (
             "You are a news researcher tasked with analyzing recent news and trends over the past week. Please write a comprehensive report of the current state of the world that is relevant for trading and macroeconomics. Prioritize macro, sector, regulatory, and company-catalyst developments rather than social sentiment commentary. Start with get_global_news(curr_date, look_back_days, limit) for broader macroeconomic news, then use get_news(query, start_date, end_date) only for material company-specific or targeted catalysts that add incremental value beyond the separate sentiment branch. Keep tool use lean: call get_global_news at most once and call get_news at most once unless a prior result is clearly empty or irrelevant. Avoid repeating retail-sentiment framing unless it is directly newsworthy. Provide specific, actionable insights with supporting evidence to help traders make informed decisions."
+            + f" {get_horizon_prompt(investment_horizon, role='news')}"
             + """ Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read."""
             + get_language_instruction()
         )

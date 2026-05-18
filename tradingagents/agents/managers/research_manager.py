@@ -7,7 +7,7 @@ from tradingagents.agents.utils.agent_utils import (
     build_instrument_context,
     get_language_instruction,
 )
-from tradingagents.agents.utils.prompt_context import tail_text
+from tradingagents.agents.utils.prompt_context import get_horizon_prompt, tail_text
 from tradingagents.agents.utils.structured import (
     bind_structured,
     invoke_structured_or_freetext,
@@ -20,6 +20,7 @@ def create_research_manager(llm):
 
     def research_manager_node(state) -> dict:
         instrument_context = build_instrument_context(state["company_of_interest"])
+        horizon_prompt = get_horizon_prompt(state.get("investment_horizon"), role="research")
         history = tail_text(
             state["investment_debate_state"].get("history", ""),
             get_config().get("investment_debate_history_max_chars", 4000),
@@ -28,6 +29,8 @@ def create_research_manager(llm):
         investment_debate_state = state["investment_debate_state"]
 
         prompt = f"""As the Research Manager and debate facilitator, your role is to critically evaluate this round of debate and deliver a clear, actionable investment plan for the trader. Keep the output concise and high-signal: avoid long recaps, focus on the strongest evidence, and make the recommendation easy for the trader to act on.
+
+{horizon_prompt}
 
 {instrument_context}
 

@@ -7,12 +7,14 @@ from tradingagents.agents.utils.agent_utils import (
     get_language_instruction,
     get_stock_data,
 )
+from tradingagents.agents.utils.prompt_context import get_horizon_prompt
 from tradingagents.dataflows.config import get_config
 
 
 def create_market_analyst(llm):
     def _build_chain(state):
         current_date = state["trade_date"]
+        investment_horizon = state.get("investment_horizon", "short_term")
         instrument_context = build_instrument_context(state["company_of_interest"])
 
         tools = [
@@ -46,6 +48,7 @@ Volume-Based Indicators:
 - vwma: VWMA: A moving average weighted by volume. Usage: Confirm trends by integrating price action with volume data. Tips: Watch for skewed results from volume spikes; use in combination with other volume analyses.
 
             - Select indicators that provide diverse and complementary information. Avoid redundancy (e.g., do not select both rsi and stochrsi). Also briefly explain why they are suitable for the given market context. When you tool call, please use the exact name of the indicators provided above as they are defined parameters, otherwise your call will fail. Make exactly one get_stock_data call first to retrieve the CSV that is needed to generate indicators. Do not call get_stock_data again unless the prior call clearly failed. After that, call get_indicators **once** with a comma-separated list of your selected indicator names instead of making separate indicator calls. Do not make multiple indicator-tool calls for the same report. Write a very detailed and nuanced report of the trends you observe. Provide specific, actionable insights with supporting evidence to help traders make informed decisions."""
+            + f" {get_horizon_prompt(investment_horizon, role='market')}"
             + """ Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read."""
             + get_language_instruction()
         )

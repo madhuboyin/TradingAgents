@@ -136,6 +136,7 @@ def test_market_analyst_uses_ainvoke():
 
     state = {
         "trade_date": "2026-05-15",
+        "investment_horizon": "medium_term",
         "company_of_interest": "SHOP",
         "market_messages": [_HumanMessage("SHOP")],
     }
@@ -154,6 +155,7 @@ def test_market_analyst_prompt_requests_batched_indicator_call():
 
     state = {
         "trade_date": "2026-05-15",
+        "investment_horizon": "long_term",
         "company_of_interest": "SHOP",
         "market_messages": [_HumanMessage("SHOP")],
     }
@@ -164,6 +166,7 @@ def test_market_analyst_prompt_requests_batched_indicator_call():
     assert "call get_indicators **once** with a comma-separated list" in system_message
     assert "Do not make multiple indicator-tool calls for the same report" in system_message
     assert "Do not call get_stock_data again unless the prior call clearly failed" in system_message
+    assert "Investment horizon: Long term (3-5 years)." in system_message
 
 
 def _load_news_module(chain):
@@ -214,6 +217,7 @@ def test_news_analyst_prompt_prioritizes_macro_and_incremental_company_news():
 
     state = {
         "trade_date": "2026-05-15",
+        "investment_horizon": "medium_term",
         "company_of_interest": "SHOP",
         "news_messages": [_HumanMessage("SHOP")],
     }
@@ -226,3 +230,4 @@ def test_news_analyst_prompt_prioritizes_macro_and_incremental_company_news():
     assert "call get_global_news at most once" in system_message
     assert "call get_news at most once" in system_message
     assert "Avoid repeating retail-sentiment framing" in system_message
+    assert "Investment horizon: Medium term (1-2 years)." in system_message

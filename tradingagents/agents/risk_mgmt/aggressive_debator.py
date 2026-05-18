@@ -1,5 +1,5 @@
 from tradingagents.agents.utils.agent_utils import get_language_instruction
-from tradingagents.agents.utils.prompt_context import tail_text
+from tradingagents.agents.utils.prompt_context import get_horizon_prompt, tail_text
 from tradingagents.dataflows.config import get_config
 
 
@@ -16,6 +16,7 @@ def create_aggressive_debator(llm):
         current_conservative_response = risk_debate_state.get("current_conservative_response", "")
         current_neutral_response = risk_debate_state.get("current_neutral_response", "")
         analyst_brief = state.get("analyst_brief", "")
+        horizon_prompt = get_horizon_prompt(state.get("investment_horizon"), role="risk")
 
         trader_decision = state["trader_investment_plan"]
 
@@ -29,7 +30,7 @@ Analyst Brief:
 {analyst_brief}
 Here is the current conversation history: {history_window} Here are the last arguments from the conservative analyst: {current_conservative_response} Here are the last arguments from the neutral analyst: {current_neutral_response}. If there are no responses from the other viewpoints yet, present your own argument based on the available data.
 
-Engage actively by addressing any specific concerns raised, refuting the weaknesses in their logic, and asserting the benefits of risk-taking to outpace market norms. Maintain a focus on debating and persuading, not just presenting data. Challenge each counterpoint to underscore why a high-risk approach is optimal. Output conversationally as if you are speaking without any special formatting.""" + get_language_instruction()
+Engage actively by addressing any specific concerns raised, refuting the weaknesses in their logic, and asserting the benefits of risk-taking to outpace market norms. Maintain a focus on debating and persuading, not just presenting data. Challenge each counterpoint to underscore why a high-risk approach is optimal. {horizon_prompt} Output conversationally as if you are speaking without any special formatting.""" + get_language_instruction()
 
         response = llm.invoke(prompt)
 

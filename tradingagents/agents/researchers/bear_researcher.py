@@ -1,5 +1,5 @@
 from tradingagents.agents.utils.agent_utils import get_language_instruction
-from tradingagents.agents.utils.prompt_context import tail_text
+from tradingagents.agents.utils.prompt_context import get_horizon_prompt, tail_text
 from tradingagents.dataflows.config import get_config
 
 
@@ -15,6 +15,7 @@ def create_bear_researcher(llm):
 
         current_response = investment_debate_state.get("current_response", "")
         analyst_brief = state.get("analyst_brief", "")
+        horizon_prompt = get_horizon_prompt(state.get("investment_horizon"), role="research")
 
         prompt = f"""You are a Bear Analyst making the case against investing in the stock. Your goal is to present a well-reasoned argument emphasizing risks, challenges, and negative indicators. Leverage the provided research and data to highlight potential downsides and counter bullish arguments effectively.
 
@@ -33,6 +34,7 @@ Analyst brief:
 Conversation history of the debate: {history_window}
 Last bull argument: {current_response}
 Use this information to deliver a compelling bear argument, refute the bull's claims, and engage in a dynamic debate that demonstrates the risks and weaknesses of investing in the stock.
+{horizon_prompt}
 """ + get_language_instruction()
 
         response = llm.invoke(prompt)

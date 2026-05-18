@@ -15,7 +15,7 @@ from tradingagents.agents.utils.agent_utils import (
     build_instrument_context,
     get_language_instruction,
 )
-from tradingagents.agents.utils.prompt_context import tail_text, truncate_text
+from tradingagents.agents.utils.prompt_context import get_horizon_prompt, tail_text, truncate_text
 from tradingagents.agents.utils.structured import (
     bind_structured,
     invoke_structured_or_freetext,
@@ -28,6 +28,7 @@ def create_portfolio_manager(llm):
 
     def portfolio_manager_node(state) -> dict:
         instrument_context = build_instrument_context(state["company_of_interest"])
+        horizon_prompt = get_horizon_prompt(state.get("investment_horizon"), role="portfolio_manager")
         config = get_config()
 
         history = tail_text(
@@ -49,6 +50,8 @@ def create_portfolio_manager(llm):
         )
 
         prompt = f"""As the Portfolio Manager, synthesize the risk analysts' debate and deliver the final trading decision. Keep the answer concise and decision-oriented: prioritize the highest-signal evidence, avoid repeating the full debate, and state the action plan crisply.
+
+{horizon_prompt}
 
 {instrument_context}
 

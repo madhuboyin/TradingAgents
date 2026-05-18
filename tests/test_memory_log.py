@@ -668,11 +668,21 @@ class TestPortfolioManagerInjection:
         state = propagator.create_initial_state("NVDA", "2026-01-10", past_context="some context")
         assert "past_context" in state
         assert state["past_context"] == "some context"
+        assert state["investment_horizon"] == "short_term"
 
     def test_past_context_defaults_to_empty(self):
         propagator = Propagator()
         state = propagator.create_initial_state("NVDA", "2026-01-10")
         assert state["past_context"] == ""
+
+    def test_initial_state_accepts_explicit_investment_horizon(self):
+        propagator = Propagator()
+        state = propagator.create_initial_state(
+            "NVDA",
+            "2026-01-10",
+            investment_horizon="long_term",
+        )
+        assert state["investment_horizon"] == "long_term"
 
     # PM prompt
 

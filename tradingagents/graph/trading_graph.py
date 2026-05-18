@@ -24,6 +24,7 @@ from tradingagents.agents import *
 from tradingagents.default_config import DEFAULT_CONFIG
 from tradingagents.utils.memory import TradingMemoryLog
 from tradingagents.dataflows.utils import safe_ticker_component
+from tradingagents.agents.utils.prompt_context import normalize_investment_horizon
 from tradingagents.agents.utils.agent_states import (
     AgentState,
     InvestDebateState,
@@ -367,7 +368,7 @@ class TradingAgentsGraph:
         if updates:
             self.memory_log.batch_update_with_outcomes(updates)
 
-    def propagate(self, company_name, trade_date):
+    def propagate(self, company_name, trade_date, investment_horizon=None):
         """Run the trading agents graph for a company on a specific date.
 
         When ``checkpoint_enabled`` is set in config, the graph is recompiled
@@ -398,7 +399,7 @@ class TradingAgentsGraph:
                 logger.info("Starting fresh for %s on %s", company_name, trade_date)
 
         try:
-            return self._run_graph(company_name, trade_date)
+            return self._run_graph(company_name, trade_date, investment_horizon)
         finally:
             self.webhook_dispatcher.flush()
             if self._checkpointer_ctx is not None:
@@ -406,11 +407,11 @@ class TradingAgentsGraph:
                 self._checkpointer_ctx = None
                 self.graph = self.workflow.compile()
 
-    def _run_graph(self, company_name, trade_date):
+    def _run_graph(self, company_name, trade_date, investment_horizon=None):
         """Run the graph using a checkpoint-compatible execution path."""
         if self.config.get("checkpoint_enabled"):
-            return self._run_graph_sync(company_name, trade_date)
-        return asyncio.run(self._run_graph_async(company_name, trade_date))
+            return self._run_graph_sync(company_name, trade_date, investment_horizon)
+        return asyncio.run(self._run_graph_async(company_name, trade_date, investment_horizon))
 
     def _init_run_timing(self, company_name, trade_date):
         """Create the shared timing payload used by sync and async runners."""
@@ -461,7 +462,7 @@ class TradingAgentsGraph:
             },
         })
 
-    def _run_graph_sync(self, company_name, trade_date):
+    def _run_graph_sync(self, company_name, trade_date, investment_horizon=None):
         """Execute the graph synchronously for checkpoint-compatible runs."""
         start_time = datetime.utcnow()
         start_time_iso = start_time.isoformat() + "Z"
@@ -482,8 +483,14 @@ class TradingAgentsGraph:
         })
 
         past_context = self.memory_log.get_past_context(company_name)
+        resolved_horizon = normalize_investment_horizon(
+            investment_horizon or self.config.get("investment_horizon")
+        )
         init_agent_state = self.propagator.create_initial_state(
-            company_name, trade_date, past_context=past_context
+            company_name,
+            trade_date,
+            past_context=past_context,
+            investment_horizon=resolved_horizon,
         )
         self._send_webhook({
             "run_id": self.run_id,
@@ -575,7 +582,7 @@ class TradingAgentsGraph:
 
         return final_state, self.process_signal(final_decision) if final_decision else "N/A"
 
-    async def _run_graph_async(self, company_name, trade_date):
+    async def _run_graph_async(self, company_name, trade_date, investment_horizon=None):
         """Execute the graph and write the resulting state to disk and memory log."""
         start_time = datetime.utcnow()
         start_time_iso = start_time.isoformat() + "Z"
@@ -598,8 +605,14 @@ class TradingAgentsGraph:
 
         # Initialize state — inject memory log context for PM.
         past_context = self.memory_log.get_past_context(company_name)
+        resolved_horizon = normalize_investment_horizon(
+            investment_horizon or self.config.get("investment_horizon")
+        )
         init_agent_state = self.propagator.create_initial_state(
-            company_name, trade_date, past_context=past_context
+            company_name,
+            trade_date,
+            past_context=past_context,
+            investment_horizon=resolved_horizon,
         )
         self._send_webhook({
             "run_id": self.run_id,
@@ -720,6 +733,7 @@ class TradingAgentsGraph:
         self.log_states_dict[str(trade_date)] = {
             "company_of_interest": final_state.get("company_of_interest"),
             "trade_date": final_state.get("trade_date"),
+            "investment_horizon": final_state.get("investment_horizon"),
             "start_time": start_time.isoformat() if start_time else None,
             "end_time": end_time.isoformat() if end_time else None,
             "market_report": final_state.get("market_report", ""),

@@ -6,6 +6,7 @@ from tradingagents.agents.utils.agent_states import (
     InvestDebateState,
     RiskDebateState,
 )
+from tradingagents.agents.utils.prompt_context import normalize_investment_horizon
 
 
 class Propagator:
@@ -16,7 +17,11 @@ class Propagator:
         self.max_recur_limit = max_recur_limit
 
     def create_initial_state(
-        self, company_name: str, trade_date: str, past_context: str = ""
+        self,
+        company_name: str,
+        trade_date: str,
+        past_context: str = "",
+        investment_horizon: str = "short_term",
     ) -> Dict[str, Any]:
         """Create the initial state for the agent graph."""
         start_msg = [("human", company_name)]
@@ -24,6 +29,7 @@ class Propagator:
             "messages": start_msg,
             "company_of_interest": company_name,
             "trade_date": str(trade_date),
+            "investment_horizon": normalize_investment_horizon(investment_horizon),
             "past_context": past_context,
             "market_messages": start_msg,
             "sentiment_messages": start_msg,

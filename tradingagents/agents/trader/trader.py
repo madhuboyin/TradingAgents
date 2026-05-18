@@ -11,6 +11,7 @@ from tradingagents.agents.utils.agent_utils import (
     build_instrument_context,
     get_language_instruction,
 )
+from tradingagents.agents.utils.prompt_context import get_horizon_prompt
 from tradingagents.agents.utils.structured import (
     bind_structured,
     invoke_structured_or_freetext,
@@ -24,6 +25,7 @@ def create_trader(llm):
         company_name = state["company_of_interest"]
         instrument_context = build_instrument_context(company_name)
         investment_plan = state["investment_plan"]
+        horizon_prompt = get_horizon_prompt(state.get("investment_horizon"), role="trader")
 
         messages = [
             {
@@ -32,7 +34,8 @@ def create_trader(llm):
                     "You are a trading agent analyzing market data to make investment decisions. "
                     "Based on your analysis, provide a specific recommendation to buy, sell, or hold. "
                     "Anchor your reasoning in the analysts' reports and the research plan. "
-                    "Keep the proposal tight and execution-focused rather than verbose."
+                    "Keep the proposal tight and execution-focused rather than verbose. "
+                    f"{horizon_prompt}"
                     + get_language_instruction()
                 ),
             },

@@ -31,6 +31,7 @@ from tradingagents.agents.utils.agent_utils import (
     get_language_instruction,
     get_news,
 )
+from tradingagents.agents.utils.prompt_context import get_horizon_prompt
 from tradingagents.dataflows.reddit import fetch_reddit_posts
 from tradingagents.dataflows.stocktwits import fetch_stocktwits_messages
 from tradingagents.dataflows.config import get_config
@@ -141,6 +142,7 @@ def create_sentiment_analyst(llm):
         return {
             "ticker": ticker,
             "end_date": end_date,
+            "investment_horizon": state.get("investment_horizon", "short_term"),
             "instrument_context": instrument_context,
             "news_block": _compress_news_for_sentiment(
                 results.get("news", "<news unavailable>")
@@ -157,6 +159,7 @@ def create_sentiment_analyst(llm):
             ticker=inputs["ticker"],
             start_date=_seven_days_back(inputs["end_date"]),
             end_date=inputs["end_date"],
+            investment_horizon=inputs["investment_horizon"],
             news_block=inputs["news_block"],
             stocktwits_block=inputs["stocktwits_block"],
             reddit_block=inputs["reddit_block"],
@@ -210,12 +213,15 @@ def _build_system_message(
     ticker: str,
     start_date: str,
     end_date: str,
+    investment_horizon: str,
     news_block: str,
     stocktwits_block: str,
     reddit_block: str,
 ) -> str:
     """Assemble the sentiment-analyst system message with structured data blocks."""
     return f"""You are a financial market sentiment analyst. Your task is to produce a comprehensive sentiment report for {ticker} covering the period from {start_date} to {end_date}, drawing on three complementary data sources that have already been collected for you.
+
+{get_horizon_prompt(investment_horizon, role='sentiment')}
 
 ## Data sources (pre-fetched, in this prompt)
 

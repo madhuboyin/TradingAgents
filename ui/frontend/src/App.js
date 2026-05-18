@@ -690,6 +690,8 @@ const App = () => {
     setElapsed('0m 0s');
     setLastValidProgress(5);
     setActiveTab('decision');
+    setSelectedRun(null);
+    setRunDetail(null);
 
     fetch('/api/jobs/trigger', {
       method: 'POST',
@@ -728,9 +730,18 @@ const App = () => {
 
   const liveRunDetail = activeStatus?.updates;
   const hasLiveCompletedRun = activeStatus?.status === 'completed' && !!liveRunDetail;
+  const isRunActive = activeStatus && activeStatus.status !== 'completed' && activeStatus.status !== 'error';
   const currentHorizon = activeStatus?.investment_horizon || liveRunDetail?.investment_horizon || runDetail?.investment_horizon || selectedRun?.investment_horizon || investmentHorizon;
-  const currentDecision = hasLiveCompletedRun ? liveRunDetail.final_trade_decision : (liveRunDetail?.final_trade_decision || runDetail?.final_trade_decision);
-  const currentPlan = hasLiveCompletedRun ? liveRunDetail.investment_plan : (liveRunDetail?.investment_plan || runDetail?.investment_plan);
+  const currentDecision = hasLiveCompletedRun
+    ? liveRunDetail.final_trade_decision
+    : isRunActive
+      ? liveRunDetail?.final_trade_decision
+      : (liveRunDetail?.final_trade_decision || runDetail?.final_trade_decision);
+  const currentPlan = hasLiveCompletedRun
+    ? liveRunDetail.investment_plan
+    : isRunActive
+      ? liveRunDetail?.investment_plan
+      : (liveRunDetail?.investment_plan || runDetail?.investment_plan);
   const activeStep = activeStatus?.active_node || (selectedAgent ? selectedAgent.label : 'Awaiting selection');
   const heroTitle = activeStatus
     ? activeStatus.status === 'error'

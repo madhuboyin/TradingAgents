@@ -110,6 +110,11 @@ def get_horizon_prompt(horizon: str | None, *, role: str) -> str:
             "medium_term": "Emphasize relative growth, margin durability, and valuation across the peer set over the next 1-2 years.",
             "long_term": "Emphasize industry structure, quality leadership, balance-sheet resilience, and multi-year relative compounding potential.",
         },
+        "catalyst": {
+            "short_term": "Emphasize the next earnings setup, near-term launches, rulings, and tactical triggers that can matter within the next year.",
+            "medium_term": "Emphasize multi-quarter milestones, execution checkpoints, and catalysts that can reshape expectations over 1-2 years.",
+            "long_term": "Summarize only catalysts that can materially affect long-horizon thesis durability or re-rate the business over 3-5 years.",
+        },
         "research": {
             "short_term": "Give extra weight to near-term catalysts, technicals, sentiment, and the current macro regime, while still balancing business quality, valuation, and financial resilience.",
             "medium_term": "Balance current setup with industry dynamics, earnings durability, and valuation over the next 1-2 years.",

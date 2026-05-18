@@ -26,6 +26,12 @@ _ENV_OVERRIDES = {
     "TRADINGAGENTS_INDUSTRY_ANALYST_MAX_PEERS": "industry_analyst_max_peers",
     "TRADINGAGENTS_INDUSTRY_ANALYST_PEER_METRIC_LIMIT": "industry_analyst_peer_metric_limit",
     "TRADINGAGENTS_INDUSTRY_ANALYST_MAX_CHARS": "industry_analyst_max_chars",
+    "TRADINGAGENTS_CATALYST_ANALYST_ENABLED": "catalyst_analyst_enabled",
+    "TRADINGAGENTS_CATALYST_LOOKAHEAD_DAYS_SHORT_TERM": "catalyst_lookahead_days_short_term",
+    "TRADINGAGENTS_CATALYST_LOOKAHEAD_DAYS_MEDIUM_TERM": "catalyst_lookahead_days_medium_term",
+    "TRADINGAGENTS_CATALYST_LOOKAHEAD_DAYS_LONG_TERM": "catalyst_lookahead_days_long_term",
+    "TRADINGAGENTS_CATALYST_ANALYST_MAX_EVENTS": "catalyst_analyst_max_events",
+    "TRADINGAGENTS_CATALYST_ANALYST_MAX_CHARS": "catalyst_analyst_max_chars",
 }
 
 
@@ -115,6 +121,13 @@ DEFAULT_CONFIG = _apply_env_overrides({
     "industry_analyst_max_peers": 5,
     "industry_analyst_peer_metric_limit": 8,
     "industry_analyst_max_chars": 1800,
+    # Earnings / catalyst analyst
+    "catalyst_analyst_enabled": True,
+    "catalyst_lookahead_days_short_term": 120,
+    "catalyst_lookahead_days_medium_term": 365,
+    "catalyst_lookahead_days_long_term": 540,
+    "catalyst_analyst_max_events": 8,
+    "catalyst_analyst_max_chars": 1800,
     # Search queries used by get_global_news for macro headlines. Extend or
     # replace to broaden geographic / sector coverage.
     "global_news_queries": [

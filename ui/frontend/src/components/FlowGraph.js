@@ -4,7 +4,7 @@ import 'reactflow/dist/style.css';
 
 const AGENT_NODE_WIDTH = 190;
 const DEFAULT_ANALYST_ORDER = ['market', 'sentiment', 'news', 'fundamentals'];
-const ANALYST_NODE_ORDER = ['market', 'sentiment', 'news', 'fundamentals', 'industry'];
+const ANALYST_NODE_ORDER = ['market', 'sentiment', 'news', 'fundamentals', 'industry', 'catalyst'];
 
 const AgentNode = ({ data }) => {
   const isSelected = data.isSelected;
@@ -127,6 +127,7 @@ const FlowGraph = ({ runData, activeStatus, selectedAnalysts = DEFAULT_ANALYST_O
       news: 'Synthesizes macro headlines and tracks insider transactions.',
       fundamentals: 'Evaluates financial health using statements, ratios, and business quality.',
       industry: 'Compares the target with direct peers to judge relative attractiveness, valuation, and quality.',
+      catalyst: 'Maps upcoming earnings and event-driven catalysts to show timing, expectations, and scenario risk.',
       bull: "Constructs the strongest possible 'buy' case by identifying positive catalysts.",
       bear: "Challenges the idea by identifying risks and potential 'sell' catalysts.",
       manager: 'Synthesizes competing researcher views into one balanced investment plan.',
@@ -140,6 +141,7 @@ const FlowGraph = ({ runData, activeStatus, selectedAnalysts = DEFAULT_ANALYST_O
       news: 'News and insider context',
       fundamentals: 'Financial quality check',
       industry: 'Peer-relative context',
+      catalyst: 'Event and timing map',
       bull: 'Upside case',
       bear: 'Risk case',
       manager: 'Thesis synthesis',
@@ -150,8 +152,12 @@ const FlowGraph = ({ runData, activeStatus, selectedAnalysts = DEFAULT_ANALYST_O
     const hasIndustryData = Boolean(
       runData?.industry_report ||
       activeStatus?.updates?.industry_report ||
+      runData?.catalyst_report ||
+      activeStatus?.updates?.catalyst_report ||
       completedNodes.some((node) => node.includes('industry')) ||
-      activeNode.includes('industry')
+      completedNodes.some((node) => node.includes('catalyst')) ||
+      activeNode.includes('industry') ||
+      activeNode.includes('catalyst')
     );
 
     const requestedAnalysts = Array.isArray(selectedAnalysts) && selectedAnalysts.length > 0
@@ -160,7 +166,7 @@ const FlowGraph = ({ runData, activeStatus, selectedAnalysts = DEFAULT_ANALYST_O
 
     const analystIds = ANALYST_NODE_ORDER.filter((id) => {
       if (requestedAnalysts.includes(id)) return true;
-      return id === 'industry' ? hasIndustryData : false;
+      return (id === 'industry' || id === 'catalyst') ? hasIndustryData : false;
     });
 
     const order = [...analystIds, 'synchronizer', 'bull', 'bear', 'manager', 'trader', 'pm', 'end'];
@@ -247,7 +253,11 @@ const FlowGraph = ({ runData, activeStatus, selectedAnalysts = DEFAULT_ANALYST_O
         type: 'agent',
         data: createAgentData(
           id,
-          id === 'industry' ? 'Industry / Peer Analyst' : `${id === 'sentiment' ? 'Sentiment' : id.charAt(0).toUpperCase() + id.slice(1)} Analyst`,
+          id === 'industry'
+            ? 'Industry / Peer Analyst'
+            : id === 'catalyst'
+              ? 'Catalyst Analyst'
+              : `${id === 'sentiment' ? 'Sentiment' : id.charAt(0).toUpperCase() + id.slice(1)} Analyst`,
           descriptions[id],
           id === 'sentiment'
             ? (isCurrentlyActive('sentiment') || isCurrentlyActive('social') ? 'Active' : isDone('sentiment') || isDone('social') ? 'Complete' : 'Pending')

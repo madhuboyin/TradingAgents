@@ -344,3 +344,85 @@ def test_industry_analyst_uses_ainvoke_and_includes_peer_prompting():
     assert "industry and peer comparison analyst" in system_message
     assert "Is the stock attractive relative to its peers?" in system_message
     assert "Investment horizon: Long term (3-5 years)." in system_message
+
+
+def _load_catalyst_module(chain):
+    _install_namespace_packages()
+
+    fake_messages = types.ModuleType("langchain_core.messages")
+    fake_messages.HumanMessage = _HumanMessage
+    fake_messages.RemoveMessage = _RemoveMessage
+    sys.modules["langchain_core.messages"] = fake_messages
+
+    fake_prompts = types.ModuleType("langchain_core.prompts")
+    _FakeChatPromptTemplate.chain = chain
+    fake_prompts.ChatPromptTemplate = _FakeChatPromptTemplate
+    fake_prompts.MessagesPlaceholder = _MessagesPlaceholder
+    sys.modules["langchain_core.prompts"] = fake_prompts
+
+    fake_runnables = types.ModuleType("langchain_core.runnables")
+    fake_runnables.RunnableLambda = _FakeRunnableLambda
+    sys.modules["langchain_core.runnables"] = fake_runnables
+
+    fake_agent_utils = types.ModuleType("tradingagents.agents.utils.agent_utils")
+    fake_agent_utils.build_instrument_context = lambda ticker: f"context for {ticker}"
+    fake_agent_utils.create_msg_delete = lambda *args, **kwargs: None
+    fake_agent_utils.get_language_instruction = lambda: ""
+    sys.modules["tradingagents.agents.utils.agent_utils"] = fake_agent_utils
+
+    fake_catalyst_tools = types.ModuleType("tradingagents.agents.utils.catalyst_data_tools")
+    fake_catalyst_tools.build_catalyst_inputs = lambda ticker, curr_date, lookahead_days, max_events: {
+        "earnings_calendar": "### SHOP Earnings Calendar\n- Earnings Date: 2026-06-01",
+        "expectation_context": "### SHOP Expectation Context\n- Revenue Growth: 0.22",
+        "event_calendar": "### SHOP Event Inventory\n- [Earnings] Q2 earnings setup",
+        "lookahead_days": lookahead_days,
+        "max_events": max_events,
+    }
+    sys.modules["tradingagents.agents.utils.catalyst_data_tools"] = fake_catalyst_tools
+
+    fake_config = types.ModuleType("tradingagents.dataflows.config")
+    fake_config.get_config = lambda: {
+        "catalyst_lookahead_days_short_term": 120,
+        "catalyst_lookahead_days_medium_term": 365,
+        "catalyst_lookahead_days_long_term": 540,
+        "catalyst_analyst_max_events": 8,
+    }
+    sys.modules["tradingagents.dataflows.config"] = fake_config
+
+    module_path = (
+        Path(__file__).resolve().parents[1]
+        / "tradingagents"
+        / "agents"
+        / "analysts"
+        / "catalyst_analyst.py"
+    )
+    spec = importlib.util.spec_from_file_location("catalyst_analyst_test_module", module_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_catalyst_analyst_uses_ainvoke_and_includes_event_blocks():
+    chain = _FakeChain()
+    module = _load_catalyst_module(chain)
+    analyst = module.create_catalyst_analyst(_FakeLLM())
+
+    state = {
+        "trade_date": "2026-05-15",
+        "investment_horizon": "short_term",
+        "company_of_interest": "SHOP",
+        "catalyst_messages": [_HumanMessage("SHOP")],
+    }
+
+    result = asyncio.run(analyst.ainvoke(state))
+
+    assert chain.ainvoke_calls == 1
+    assert chain.invoke_calls == 0
+    assert result["catalyst_report"] == "async report"
+
+    system_message = chain.prompt_partials["system_message"]
+    assert "earnings and catalyst analyst" in system_message
+    assert "Catalyst Calendar" in system_message
+    assert "What Must Go Right" in system_message
+    assert "lookahead window is 120 days" in system_message

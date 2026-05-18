@@ -19,6 +19,7 @@ const ANALYST_OPTIONS = [
   { id: 'news', label: 'News', helper: 'Headlines, macro, and insider context' },
   { id: 'fundamentals', label: 'Fundamentals', helper: 'Financial quality and valuation base' },
   { id: 'industry', label: 'Industry / Peer', helper: 'Relative positioning and peer comparison' },
+  { id: 'catalyst', label: 'Earnings / Catalyst', helper: 'Upcoming events, timing, and expectation risk' },
 ];
 
 const ANALYST_REPORT_SECTIONS = [
@@ -27,6 +28,7 @@ const ANALYST_REPORT_SECTIONS = [
   { key: 'news_report', title: 'News Analyst', helper: 'Macro headlines, company developments, and insider context.' },
   { key: 'fundamentals_report', title: 'Fundamentals Analyst', helper: 'Financial health, profitability, and balance-sheet quality.' },
   { key: 'industry_report', title: 'Industry / Peer Comparison Analyst', helper: 'Relative valuation, margins, growth, and peer quality.' },
+  { key: 'catalyst_report', title: 'Earnings / Catalyst Analyst', helper: 'Upcoming events, expectation setup, and what-must-go-right / wrong.' },
 ];
 
 const SURFACE = {

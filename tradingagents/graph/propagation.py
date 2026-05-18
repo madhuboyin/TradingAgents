@@ -36,6 +36,7 @@ class Propagator:
             "news_messages": start_msg,
             "fundamentals_messages": start_msg,
             "industry_messages": start_msg,
+            "catalyst_messages": start_msg,
             "analyst_count": 0,
             "investment_debate_state": InvestDebateState(
                 {
@@ -67,6 +68,7 @@ class Propagator:
             "news_report": "",
             "analyst_brief": "",
             "industry_report": "",
+            "catalyst_report": "",
         }
 
     def get_graph_args(self, callbacks: Optional[List] = None) -> Dict[str, Any]:

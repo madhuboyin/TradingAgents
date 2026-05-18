@@ -62,6 +62,14 @@ class ConditionalLogic:
             return "tools_industry"
         return "Msg Clear Industry"
 
+    def should_continue_catalyst(self, state: AgentState):
+        """Determine if earnings / catalyst analysis should continue."""
+        messages = state["catalyst_messages"]
+        last_message = messages[-1]
+        if self._has_tool_calls(last_message):
+            return "tools_catalyst"
+        return "Msg Clear Catalyst"
+
     def should_continue_debate(self, state: AgentState) -> str:
         """Determine if debate should continue."""
 

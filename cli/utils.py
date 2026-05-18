@@ -20,6 +20,7 @@ ANALYST_ORDER = [
     ("News Analyst", AnalystType.NEWS),
     ("Fundamentals Analyst", AnalystType.FUNDAMENTALS),
     ("Industry / Peer Comparison Analyst", AnalystType.INDUSTRY),
+    ("Earnings / Catalyst Analyst", AnalystType.CATALYST),
 ]
 
 

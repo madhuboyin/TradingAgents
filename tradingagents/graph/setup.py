@@ -43,6 +43,7 @@ class GraphSetup:
                 - "news": News analyst
                 - "fundamentals": Fundamentals analyst
                 - "industry": Industry / peer comparison analyst
+                - "catalyst": Earnings / catalyst analyst
             standalone (bool): If True, stop after the analyst phase.
         """
         if len(selected_analysts) == 0:
@@ -78,6 +79,10 @@ class GraphSetup:
         if "industry" in selected_analysts:
             analyst_nodes["industry"] = create_industry_analyst(self.quick_thinking_llm)
             delete_nodes["industry"] = create_msg_delete("industry_messages")
+
+        if "catalyst" in selected_analysts:
+            analyst_nodes["catalyst"] = create_catalyst_analyst(self.quick_thinking_llm)
+            delete_nodes["catalyst"] = create_msg_delete("catalyst_messages")
 
         # Create researcher and manager nodes
         bull_researcher_node = create_bull_researcher(self.quick_thinking_llm)
@@ -130,6 +135,7 @@ class GraphSetup:
                     ("News Analysis", state.get("news_report", "")),
                     ("Fundamentals Analysis", state.get("fundamentals_report", "")),
                     ("Industry / Peer Comparison", state.get("industry_report", "")),
+                    ("Earnings / Catalyst Analysis", state.get("catalyst_report", "")),
                 ],
                 max_chars_per_section=self.analyst_brief_max_chars,
             )

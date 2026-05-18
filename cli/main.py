@@ -108,6 +108,7 @@ class MessageBuffer:
         "news": "News Analyst",
         "fundamentals": "Fundamentals Analyst",
         "industry": "Industry / Peer Comparison Analyst",
+        "catalyst": "Earnings / Catalyst Analyst",
     }
 
     # Report section mapping: section -> (analyst_key for filtering, finalizing_agent)
@@ -119,6 +120,7 @@ class MessageBuffer:
         "news_report": ("news", "News Analyst"),
         "fundamentals_report": ("fundamentals", "Fundamentals Analyst"),
         "industry_report": ("industry", "Industry / Peer Comparison Analyst"),
+        "catalyst_report": ("catalyst", "Earnings / Catalyst Analyst"),
         "investment_plan": (None, "Research Manager"),
         "trader_investment_plan": (None, "Trader"),
         "final_trade_decision": (None, "Portfolio Manager"),
@@ -228,6 +230,7 @@ class MessageBuffer:
                 "news_report": "News Analysis",
                 "fundamentals_report": "Fundamentals Analysis",
                 "industry_report": "Industry / Peer Comparison",
+                "catalyst_report": "Earnings / Catalyst Analysis",
                 "investment_plan": "Research Team Decision",
                 "trader_investment_plan": "Trading Team Plan",
                 "final_trade_decision": "Portfolio Management Decision",
@@ -249,6 +252,7 @@ class MessageBuffer:
             "news_report",
             "fundamentals_report",
             "industry_report",
+            "catalyst_report",
         ]
         if any(self.report_sections.get(section) for section in analyst_sections):
             report_parts.append("## Analyst Team Reports")
@@ -271,6 +275,10 @@ class MessageBuffer:
             if self.report_sections.get("industry_report"):
                 report_parts.append(
                     f"### Industry / Peer Comparison\n{self.report_sections['industry_report']}"
+                )
+            if self.report_sections.get("catalyst_report"):
+                report_parts.append(
+                    f"### Earnings / Catalyst Analysis\n{self.report_sections['catalyst_report']}"
                 )
 
         # Research Team Reports
@@ -352,6 +360,7 @@ def update_display(layout, spinner_text=None, stats_handler=None, start_time=Non
             "News Analyst",
             "Fundamentals Analyst",
             "Industry / Peer Comparison Analyst",
+            "Earnings / Catalyst Analyst",
         ],
         "Research Team": ["Bull Researcher", "Bear Researcher", "Research Manager"],
         "Trading Team": ["Trader"],
@@ -796,6 +805,10 @@ def save_report_to_disk(final_state, ticker: str, save_path: Path):
         analysts_dir.mkdir(exist_ok=True)
         (analysts_dir / "industry.md").write_text(final_state["industry_report"], encoding="utf-8")
         analyst_parts.append(("Industry / Peer Comparison Analyst", final_state["industry_report"]))
+    if final_state.get("catalyst_report"):
+        analysts_dir.mkdir(exist_ok=True)
+        (analysts_dir / "catalyst.md").write_text(final_state["catalyst_report"], encoding="utf-8")
+        analyst_parts.append(("Earnings / Catalyst Analyst", final_state["catalyst_report"]))
     if analyst_parts:
         content = "\n\n".join(f"### {name}\n{text}" for name, text in analyst_parts)
         sections.append(f"## I. Analyst Team Reports\n\n{content}")
@@ -879,6 +892,8 @@ def display_complete_report(final_state):
         analysts.append(("Fundamentals Analyst", final_state["fundamentals_report"]))
     if final_state.get("industry_report"):
         analysts.append(("Industry / Peer Comparison Analyst", final_state["industry_report"]))
+    if final_state.get("catalyst_report"):
+        analysts.append(("Earnings / Catalyst Analyst", final_state["catalyst_report"]))
     if analysts:
         console.print(Panel("[bold]I. Analyst Team Reports[/bold]", border_style="cyan"))
         for title, content in analysts:
@@ -933,13 +948,14 @@ def update_research_team_status(status):
 
 
 # Ordered list of analysts for status transitions
-ANALYST_ORDER = ["market", "social", "news", "fundamentals", "industry"]
+ANALYST_ORDER = ["market", "social", "news", "fundamentals", "industry", "catalyst"]
 ANALYST_AGENT_NAMES = {
     "market": "Market Analyst",
     "social": "Sentiment Analyst",
     "news": "News Analyst",
     "fundamentals": "Fundamentals Analyst",
     "industry": "Industry / Peer Comparison Analyst",
+    "catalyst": "Earnings / Catalyst Analyst",
 }
 ANALYST_REPORT_MAP = {
     "market": "market_report",
@@ -947,6 +963,7 @@ ANALYST_REPORT_MAP = {
     "news": "news_report",
     "fundamentals": "fundamentals_report",
     "industry": "industry_report",
+    "catalyst": "catalyst_report",
 }
 
 
@@ -1397,7 +1414,7 @@ def trade(
         False, "--checkpoint", help="Enable checkpoint/resume."
     ),
     analysts: Optional[str] = typer.Option(
-        None, "--analysts", help="Comma-separated list of analysts (market,social,news,fundamentals)."
+        None, "--analysts", help="Comma-separated list of analysts (market,social,news,fundamentals,industry,catalyst)."
     ),
     standalone: bool = typer.Option(
         False, "--standalone", help="Stop after analyst phase."
@@ -1474,7 +1491,7 @@ def agent(
         date = datetime.datetime.now().strftime("%Y-%m-%d")
         
     if analyst_type.lower() == "all":
-        analysts = ["market", "social", "news", "fundamentals", "industry"]
+        analysts = ["market", "social", "news", "fundamentals", "industry", "catalyst"]
     else:
         analysts = [analyst_type.lower()]
         
@@ -1529,7 +1546,7 @@ def portfolio(
         help="Maximum number of tickers to analyze concurrently.",
     ),
     analysts: Optional[str] = typer.Option(
-        None, "--analysts", help="Comma-separated list of analysts (market,social,news,fundamentals)."
+        None, "--analysts", help="Comma-separated list of analysts (market,social,news,fundamentals,industry,catalyst)."
     ),
     standalone: bool = typer.Option(
         False, "--standalone", help="Stop after analyst phase."

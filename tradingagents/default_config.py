@@ -89,8 +89,8 @@ DEFAULT_CONFIG = _apply_env_overrides({
     "yfinance_max_retries": 1,
     "yfinance_base_delay_seconds": 1.0,
     "sentiment_fetch_timeout_seconds": 5.0,
-    "sentiment_stocktwits_limit": 20,
-    "sentiment_reddit_limit_per_sub": 3,
+    "sentiment_stocktwits_limit": 12,
+    "sentiment_reddit_limit_per_sub": 2,
     "sentiment_enable_stocktwits": True,
     "sentiment_enable_reddit": True,
     # Progress dispatch controls

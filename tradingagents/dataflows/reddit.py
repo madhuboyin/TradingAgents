@@ -90,8 +90,8 @@ def fetch_reddit_posts(
                 time.strftime("%Y-%m-%d", time.gmtime(created)) if created else "?"
             )
             selftext = (p.get("selftext") or "").replace("\n", " ").strip()
-            if len(selftext) > 240:
-                selftext = selftext[:240] + "…"
+            if len(selftext) > 160:
+                selftext = selftext[:160] + "…"
             lines.append(
                 f"  [{created_str} · {score:>4}↑ · {comments:>3}c] {title}"
                 + (f"\n    body excerpt: {selftext}" if selftext else "")

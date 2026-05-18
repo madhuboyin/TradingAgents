@@ -11,6 +11,24 @@ from .config import get_config
 from .stockstats_utils import yf_retry
 
 
+def _compress_summary(summary: str, max_chars: int = 180) -> str:
+    """Keep only the first sentence or a short leading excerpt."""
+    if not summary:
+        return ""
+    compact = " ".join(summary.split()).strip()
+    if not compact:
+        return ""
+    for sep in (". ", "! ", "? "):
+        if sep in compact:
+            first = compact.split(sep, 1)[0].strip()
+            if first:
+                compact = first + sep.strip()
+            break
+    if len(compact) <= max_chars:
+        return compact
+    return compact[: max_chars - 1].rstrip() + "…"
+
+
 def _extract_article_data(article: dict) -> dict:
     """Extract article data from yfinance news format (handles nested 'content' structure)."""
     # Handle nested content structure
@@ -100,8 +118,9 @@ def get_news_yfinance(
                 seen_titles.add(normalized_title)
 
             news_str += f"### {data['title']} (source: {data['publisher']})\n"
-            if data["summary"]:
-                news_str += f"{data['summary']}\n"
+            summary = _compress_summary(data["summary"])
+            if summary:
+                news_str += f"{summary}\n"
             news_str += "\n"
             filtered_count += 1
 
@@ -203,6 +222,7 @@ def get_global_news_yfinance(
                 summary = ""
 
             news_str += f"### {title} (source: {publisher})\n"
+            summary = _compress_summary(summary)
             if summary:
                 news_str += f"{summary}\n"
             news_str += "\n"

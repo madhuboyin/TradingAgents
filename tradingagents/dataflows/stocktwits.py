@@ -57,8 +57,8 @@ def fetch_stocktwits_messages(ticker: str, limit: int = 30, timeout: float = 10.
         sentiment_obj = entities.get("sentiment") or {}
         sentiment = sentiment_obj.get("basic") if isinstance(sentiment_obj, dict) else None
         body = (m.get("body") or "").replace("\n", " ").strip()
-        if len(body) > 280:
-            body = body[:280] + "…"
+        if len(body) > 180:
+            body = body[:180] + "…"
 
         if sentiment == "Bullish":
             bullish += 1

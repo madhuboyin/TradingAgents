@@ -6,6 +6,96 @@ import yfinance as yf
 import os
 from .stockstats_utils import StockstatsUtils, _clean_dataframe, yf_retry, load_ohlcv, filter_financials_by_date
 
+
+def _summarize_indicator_window(
+    indicator: str,
+    date_values: list[tuple[str, str]],
+    *,
+    keep_rows: int = 10,
+) -> str:
+    """Return a compact indicator summary plus the most recent rows."""
+    numeric_points: list[tuple[str, float]] = []
+    for date_str, value in date_values:
+        try:
+            numeric_points.append((date_str, float(value)))
+        except (TypeError, ValueError):
+            continue
+
+    lines = []
+    if numeric_points:
+        latest_date, latest_value = numeric_points[0]
+        oldest_date, oldest_value = numeric_points[-1]
+        window_values = [value for _, value in numeric_points]
+        lines.append(f"- Latest ({latest_date}): {latest_value}")
+        lines.append(f"- Window change vs oldest numeric point ({oldest_date}): {latest_value - oldest_value:+.4f}")
+        lines.append(f"- Window high / low: {max(window_values):.4f} / {min(window_values):.4f}")
+    else:
+        lines.append("- No numeric values available in this window.")
+
+    recent_rows = date_values[:keep_rows]
+    row_lines = [f"{date_str}: {value}" for date_str, value in recent_rows]
+    return "\n".join(lines) + "\n\nRecent values:\n" + "\n".join(row_lines)
+
+
+def _summarize_financial_statement(
+    data: pd.DataFrame,
+    *,
+    title: str,
+    ticker: str,
+    freq: str,
+    max_periods: int = 4,
+    max_rows: int = 16,
+) -> str:
+    """Trim a financial statement to the latest periods and most relevant rows."""
+    if data.empty:
+        return f"No {title.lower()} data found for symbol '{ticker}'"
+
+    recent = data.iloc[:, :max_periods].copy()
+
+    priority_map = {
+        "Balance Sheet": [
+            "Total Assets", "Current Assets", "Cash And Cash Equivalents",
+            "Inventory", "Total Liabilities Net Minority Interest",
+            "Current Liabilities", "Long Term Debt", "Total Equity Gross Minority Interest",
+        ],
+        "Cash Flow": [
+            "Operating Cash Flow", "Cash Flow From Continuing Operating Activities",
+            "Investing Cash Flow", "Financing Cash Flow", "Free Cash Flow",
+            "Capital Expenditure", "Net Income From Continuing Operations",
+        ],
+        "Income Statement": [
+            "Total Revenue", "Cost Of Revenue", "Gross Profit",
+            "Operating Income", "EBITDA", "Pretax Income",
+            "Net Income", "Basic EPS", "Diluted EPS",
+        ],
+    }
+
+    selected_labels = []
+    seen = set()
+    for label in priority_map.get(title, []):
+        if label in recent.index and label not in seen:
+            selected_labels.append(label)
+            seen.add(label)
+
+    for label in recent.index:
+        if label in seen:
+            continue
+        row = recent.loc[label]
+        if row.notna().any():
+            selected_labels.append(label)
+            seen.add(label)
+        if len(selected_labels) >= max_rows:
+            break
+
+    trimmed = recent.loc[selected_labels[:max_rows]]
+    csv_string = trimmed.to_csv()
+
+    header = f"# {title} data for {ticker.upper()} ({freq})\n"
+    header += f"# Latest periods included: {trimmed.shape[1]}\n"
+    header += f"# Rows included: {trimmed.shape[0]}\n"
+    header += f"# Data retrieved on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+    return header + csv_string
+
 def get_YFin_data_online(
     symbol: Annotated[str, "ticker symbol of the company"],
     start_date: Annotated[str, "Start date in yyyy-mm-dd format"],
@@ -193,7 +283,7 @@ def get_stock_stats_indicators_window(
 
     result_str = (
         f"## {indicator} values from {before.strftime('%Y-%m-%d')} to {end_date}:\n\n"
-        + ind_string
+        + _summarize_indicator_window(indicator, date_values)
         + "\n\n"
         + best_ind_params.get(indicator, "No description available.")
     )
@@ -334,17 +424,12 @@ def get_balance_sheet(
 
         data = filter_financials_by_date(data, curr_date)
 
-        if data.empty:
-            return f"No balance sheet data found for symbol '{ticker}'"
-            
-        # Convert to CSV string for consistency with other functions
-        csv_string = data.to_csv()
-        
-        # Add header information
-        header = f"# Balance Sheet data for {ticker.upper()} ({freq})\n"
-        header += f"# Data retrieved on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-        
-        return header + csv_string
+        return _summarize_financial_statement(
+            data,
+            title="Balance Sheet",
+            ticker=ticker,
+            freq=freq,
+        )
         
     except Exception as e:
         return f"Error retrieving balance sheet for {ticker}: {str(e)}"
@@ -366,17 +451,12 @@ def get_cashflow(
 
         data = filter_financials_by_date(data, curr_date)
 
-        if data.empty:
-            return f"No cash flow data found for symbol '{ticker}'"
-            
-        # Convert to CSV string for consistency with other functions
-        csv_string = data.to_csv()
-        
-        # Add header information
-        header = f"# Cash Flow data for {ticker.upper()} ({freq})\n"
-        header += f"# Data retrieved on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-        
-        return header + csv_string
+        return _summarize_financial_statement(
+            data,
+            title="Cash Flow",
+            ticker=ticker,
+            freq=freq,
+        )
         
     except Exception as e:
         return f"Error retrieving cash flow for {ticker}: {str(e)}"
@@ -398,17 +478,12 @@ def get_income_statement(
 
         data = filter_financials_by_date(data, curr_date)
 
-        if data.empty:
-            return f"No income statement data found for symbol '{ticker}'"
-            
-        # Convert to CSV string for consistency with other functions
-        csv_string = data.to_csv()
-        
-        # Add header information
-        header = f"# Income Statement data for {ticker.upper()} ({freq})\n"
-        header += f"# Data retrieved on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-        
-        return header + csv_string
+        return _summarize_financial_statement(
+            data,
+            title="Income Statement",
+            ticker=ticker,
+            freq=freq,
+        )
         
     except Exception as e:
         return f"Error retrieving income statement for {ticker}: {str(e)}"

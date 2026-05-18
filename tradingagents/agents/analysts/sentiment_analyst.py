@@ -165,23 +165,17 @@ def create_sentiment_analyst(llm):
             reddit_block=inputs["reddit_block"],
         )
 
+        system_content = (
+            system_message
+            + f" {inputs['instrument_context']}"
+        )
+
         prompt = ChatPromptTemplate.from_messages(
             [
-                (
-                    "system",
-                    "You are a helpful AI assistant, collaborating with other assistants."
-                    " If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable,"
-                    " prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop."
-                    "\n{system_message}\n"
-                    "For your reference, the current date is {current_date}. {instrument_context}",
-                ),
+                ("system", system_content),
                 MessagesPlaceholder(variable_name="messages"),
             ]
         )
-
-        prompt = prompt.partial(system_message=system_message)
-        prompt = prompt.partial(current_date=inputs["end_date"])
-        prompt = prompt.partial(instrument_context=inputs["instrument_context"])
         return prompt | llm
 
     def _format_result(state, result):

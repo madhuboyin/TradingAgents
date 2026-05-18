@@ -122,7 +122,7 @@ class TraderProposal(BaseModel):
     reasoning: str = Field(
         description=(
             "The case for this action, anchored in the analysts' reports and "
-            "the research plan. Two to four sentences."
+            "the research plan. Two to three sentences."
         ),
     )
     entry_price: Optional[float] = Field(
@@ -135,7 +135,7 @@ class TraderProposal(BaseModel):
     )
     position_sizing: Optional[str] = Field(
         default=None,
-        description="Optional sizing guidance, e.g. '5% of portfolio'.",
+        description="Optional sizing guidance, ideally a short phrase such as '5% of portfolio'.",
     )
 
 
@@ -187,7 +187,7 @@ class PortfolioDecision(BaseModel):
     executive_summary: str = Field(
         description=(
             "A concise action plan covering entry strategy, position sizing, "
-            "key risk levels, and time horizon. Two to four sentences."
+            "key risk levels, and time horizon. Two to three sentences."
         ),
     )
     investment_thesis: str = Field(
@@ -204,7 +204,7 @@ class PortfolioDecision(BaseModel):
     )
     time_horizon: Optional[str] = Field(
         default=None,
-        description="Optional recommended holding period, e.g. '3-6 months'.",
+        description="Optional recommended holding period, ideally a short phrase such as '3-6 months'.",
     )
 
 

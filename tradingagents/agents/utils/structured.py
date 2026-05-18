@@ -53,6 +53,39 @@ def _extract_fallback_text(exc: Exception) -> Optional[str]:
     return None
 
 
+def _is_non_retryable_runtime_failure(exc: Exception) -> bool:
+    """Return True when a second plain-text LLM call is very unlikely to help.
+
+    These failures usually indicate account, permission, quota, or request-shape
+    problems. Retrying the same prompt through ``plain_llm.invoke`` tends to
+    double-bill a failing run without improving the outcome.
+    """
+    name = type(exc).__name__.lower()
+    message = str(exc).lower()
+    markers = (
+        "rate limit",
+        "ratelimit",
+        "quota",
+        "insufficient_quota",
+        "authentication",
+        "auth",
+        "api key",
+        "permission",
+        "access denied",
+        "forbidden",
+        "unauthorized",
+        "invalid request",
+        "bad request",
+        "unsupported model",
+        "model not found",
+        "resource exhausted",
+        "429",
+        "403",
+        "401",
+    )
+    return any(marker in name or marker in message for marker in markers)
+
+
 def bind_structured(llm: Any, schema: type[T], agent_name: str) -> Optional[Any]:
     """Return ``llm.with_structured_output(schema)`` or ``None`` if unsupported.
 
@@ -97,6 +130,13 @@ def invoke_structured_or_freetext(
                 )
                 if recovered:
                     return recovered
+                raise
+
+            if _is_non_retryable_runtime_failure(exc):
+                logger.warning(
+                    "%s: structured-output invocation failed (%s); skipping duplicate free-text retry",
+                    agent_name, exc,
+                )
                 raise
 
             logger.warning(

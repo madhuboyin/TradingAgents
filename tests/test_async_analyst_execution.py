@@ -163,6 +163,7 @@ def test_market_analyst_prompt_requests_batched_indicator_call():
     system_message = chain.prompt_partials["system_message"]
     assert "call get_indicators **once** with a comma-separated list" in system_message
     assert "Do not make multiple indicator-tool calls for the same report" in system_message
+    assert "Do not call get_stock_data again unless the prior call clearly failed" in system_message
 
 
 def _load_news_module(chain):
@@ -222,4 +223,6 @@ def test_news_analyst_prompt_prioritizes_macro_and_incremental_company_news():
     system_message = chain.prompt_partials["system_message"]
     assert "Start with get_global_news" in system_message
     assert "only for material company-specific or targeted catalysts" in system_message
+    assert "call get_global_news at most once" in system_message
+    assert "call get_news at most once" in system_message
     assert "Avoid repeating retail-sentiment framing" in system_message

@@ -171,6 +171,18 @@ class TestTraderAgent:
 
         llm.invoke.assert_not_called()
 
+    def test_does_not_retry_plain_invoke_for_rate_limit_failure(self):
+        llm = MagicMock()
+        structured = MagicMock()
+        structured.invoke.side_effect = RuntimeError("429 rate limit exceeded")
+        llm.with_structured_output.return_value = structured
+        trader = create_trader(llm)
+
+        with pytest.raises(RuntimeError):
+            trader(_make_trader_state())
+
+        llm.invoke.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # Research Manager agent: structured happy path + fallback

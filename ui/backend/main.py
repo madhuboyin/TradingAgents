@@ -100,6 +100,7 @@ def _make_idle_status() -> Dict[str, Any]:
         "run_id": None,
         "ticker": None,
         "date": None,
+        "investment_horizon": None,
         "active_node": None,
         "completed_nodes": [],
         "updates": {},
@@ -119,12 +120,18 @@ def _parse_ticker_list(raw: Optional[str]) -> List[str]:
     return [ticker.strip().upper() for ticker in raw.split(",") if ticker.strip()]
 
 
-def _make_run_status(run_id: str, display_ticker: str, requested_tickers: List[str]) -> Dict[str, Any]:
+def _make_run_status(
+    run_id: str,
+    display_ticker: str,
+    requested_tickers: List[str],
+    investment_horizon: Optional[str] = None,
+) -> Dict[str, Any]:
     start_time = datetime.utcnow().isoformat() + "Z"
     return {
         "run_id": run_id,
         "ticker": display_ticker,
         "date": datetime.now().strftime("%Y-%m-%d"),
+        "investment_horizon": investment_horizon,
         "active_node": "Initializing...",
         "completed_nodes": [],
         "updates": {},
@@ -206,6 +213,7 @@ async def trigger_job(data: Optional[Dict[str, Any]] = None):
     requested_analysts = data.get("analysts") if data else None
     is_standalone = data.get("standalone", False) if data else False
     requested_max_concurrency = data.get("max_concurrency") if data else None
+    requested_investment_horizon = data.get("investment_horizon") if data else None
     requested_ticker_list = _parse_ticker_list(requested_tickers)
     run_id = str(uuid4())
     
@@ -218,7 +226,12 @@ async def trigger_job(data: Optional[Dict[str, Any]] = None):
             display_ticker = "Portfolio"
 
     with run_status_lock:
-        run_statuses[run_id] = _make_run_status(run_id, display_ticker, requested_ticker_list)
+        run_statuses[run_id] = _make_run_status(
+            run_id,
+            display_ticker,
+            requested_ticker_list,
+            investment_horizon=requested_investment_horizon,
+        )
         latest_run_id = run_id
 
     if not batch_v1:
@@ -258,6 +271,8 @@ async def trigger_job(data: Optional[Dict[str, Any]] = None):
             cmd_args.append("--standalone")
         if requested_max_concurrency:
             cmd_args.extend(["--max-concurrency", str(requested_max_concurrency)])
+        if requested_investment_horizon:
+            cmd_args.extend(["--investment-horizon", requested_investment_horizon])
         cmd_args.extend(["--run-id", run_id])
 
         # Override the command arguments
@@ -282,6 +297,7 @@ async def trigger_job(data: Optional[Dict[str, Any]] = None):
             "status": "triggered",
             "job_name": job_name,
             "tickers": requested_tickers,
+            "investment_horizon": requested_investment_horizon,
             "run_id": run_id,
         }
     except Exception as e:
@@ -312,7 +328,12 @@ async def handle_progress_webhook(update: Dict[str, Any]):
 
     with run_status_lock:
         if run_id not in run_statuses:
-            run_statuses[run_id] = _make_run_status(run_id, ticker, [])
+            run_statuses[run_id] = _make_run_status(
+                run_id,
+                ticker,
+                [],
+                investment_horizon=update.get("investment_horizon"),
+            )
         latest_run_id = run_id
         run_status = run_statuses[run_id]
 
@@ -321,6 +342,7 @@ async def handle_progress_webhook(update: Dict[str, Any]):
             {
                 "ticker": ticker,
                 "date": update.get("date"),
+                "investment_horizon": update.get("investment_horizon"),
                 "active_node": None,
                 "completed_nodes": [],
                 "updates": {},
@@ -352,6 +374,7 @@ async def handle_progress_webhook(update: Dict[str, Any]):
 
         ticker_state.update({
             "date": update.get("date"),
+            "investment_horizon": update.get("investment_horizon") or ticker_state.get("investment_horizon"),
             "status": update_status,
             "last_update": update.get("timestamp"),
             "start_time": update.get("start_time") or ticker_state.get("start_time"),
@@ -364,6 +387,7 @@ async def handle_progress_webhook(update: Dict[str, Any]):
         run_status.update({
             "ticker": ticker,
             "date": update.get("date"),
+            "investment_horizon": ticker_state.get("investment_horizon") or run_status.get("investment_horizon"),
             "active_node": ticker_state.get("active_node"),
             "completed_nodes": list(ticker_state.get("completed_nodes", [])),
             "updates": dict(ticker_state.get("updates", {})),
@@ -404,6 +428,15 @@ RESULTS_DIR = Path(DEFAULT_CONFIG.get("results_dir", "results"))
 
 MEMORY_LOG_PATH = Path(DEFAULT_CONFIG.get("memory_log_path", os.path.expanduser("~/.tradingagents/memory/trading_memory.md")))
 
+
+def _read_investment_horizon(log_file: Path) -> Optional[str]:
+    try:
+        with open(log_file, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        return payload.get("investment_horizon")
+    except Exception:
+        return None
+
 @app.get("/api/runs")
 async def list_runs() -> List[Dict[str, Any]]:
     """List all available trade runs organized by ticker."""
@@ -422,7 +455,8 @@ async def list_runs() -> List[Dict[str, Any]]:
                         "ticker": ticker_dir.name,
                         "date": date_str,
                         "file_path": str(log_file),
-                        "mtime": log_file.stat().st_mtime
+                        "mtime": log_file.stat().st_mtime,
+                        "investment_horizon": _read_investment_horizon(log_file),
                     })
     
     # Sort by mtime descending (newest file first)

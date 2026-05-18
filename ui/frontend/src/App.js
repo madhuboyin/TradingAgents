@@ -36,6 +36,16 @@ const formatStatusLabel = (status) => {
   return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
+const formatInvestmentHorizon = (horizon) => {
+  if (!horizon) return 'Short term (<1 year)';
+  const labels = {
+    short_term: 'Short term (<1 year)',
+    medium_term: 'Medium term (1-2 years)',
+    long_term: 'Long term (3-5 years)',
+  };
+  return labels[horizon] || horizon;
+};
+
 const parseDecisionHeadline = (content) => {
   if (!content) return 'No decision yet';
   const firstMeaningfulLine = content
@@ -325,6 +335,7 @@ const App = () => {
   const [activeRunId, setActiveRunId] = useState(null);
   const [lastValidProgress, setLastValidProgress] = useState(5);
   const [portfolio, setPortfolio] = useState('');
+  const [investmentHorizon, setInvestmentHorizon] = useState('short_term');
   const [isSavingPortfolio, setIsSavingPortfolio] = useState(false);
   const [isTriggering, setIsTriggering] = useState(false);
   const [selectedRun, setSelectedRun] = useState(null);
@@ -549,7 +560,7 @@ const App = () => {
     fetch('/api/jobs/trigger', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tickers: portfolio }),
+      body: JSON.stringify({ tickers: portfolio, investment_horizon: investmentHorizon }),
     })
       .then((res) => {
         if (!res.ok) {
@@ -583,6 +594,7 @@ const App = () => {
 
   const liveRunDetail = activeStatus?.updates;
   const hasLiveCompletedRun = activeStatus?.status === 'completed' && !!liveRunDetail;
+  const currentHorizon = activeStatus?.investment_horizon || liveRunDetail?.investment_horizon || runDetail?.investment_horizon || selectedRun?.investment_horizon || investmentHorizon;
   const currentDecision = hasLiveCompletedRun ? liveRunDetail.final_trade_decision : (liveRunDetail?.final_trade_decision || runDetail?.final_trade_decision);
   const currentPlan = hasLiveCompletedRun ? liveRunDetail.investment_plan : (liveRunDetail?.investment_plan || runDetail?.investment_plan);
   const activeStep = activeStatus?.active_node || (selectedAgent ? selectedAgent.label : 'Awaiting selection');
@@ -616,6 +628,12 @@ const App = () => {
       value: formatStatusLabel(activeStatus?.status || 'completed'),
       tone: statusTone,
       helper: activeStatus?.status === 'error' ? 'Run needs attention.' : activeStatus ? 'Live workflow state.' : 'Most recent selected run.',
+    },
+    {
+      label: 'Horizon',
+      value: formatInvestmentHorizon(currentHorizon),
+      tone: SURFACE.purple,
+      helper: 'Target holding period for this recommendation.',
     },
     {
       label: 'Current Step',
@@ -727,6 +745,29 @@ const App = () => {
               <div style={{ fontSize: '12px', color: SURFACE.textMuted, lineHeight: 1.6, marginBottom: '10px' }}>
                 Enter comma-separated tickers for the next analysis run.
               </div>
+              <label style={{ display: 'block', fontSize: '12px', color: SURFACE.textMuted, marginBottom: '8px' }}>
+                Investment horizon
+              </label>
+              <select
+                value={investmentHorizon}
+                onChange={(e) => setInvestmentHorizon(e.target.value)}
+                style={{
+                  width: '100%',
+                  background: SURFACE.appBg,
+                  border: `1px solid ${SURFACE.borderStrong}`,
+                  borderRadius: '10px',
+                  color: SURFACE.text,
+                  fontSize: '13px',
+                  padding: '10px 12px',
+                  fontFamily: 'inherit',
+                  boxSizing: 'border-box',
+                  marginBottom: '10px',
+                }}
+              >
+                <option value="short_term">Short term (&lt;1 year)</option>
+                <option value="medium_term">Medium term (1-2 years)</option>
+                <option value="long_term">Long term (3-5 years)</option>
+              </select>
               <textarea
                 value={portfolio}
                 onChange={(e) => setPortfolio(e.target.value)}
@@ -825,7 +866,12 @@ const App = () => {
                   >
                     <div>
                       <div style={{ fontWeight: 700 }}>{run.ticker}</div>
-                      <div style={{ fontSize: '12px', color: SURFACE.textMuted, marginTop: '4px' }}>{run.date}</div>
+                      <div style={{ fontSize: '12px', color: SURFACE.textMuted, marginTop: '4px' }}>
+                        {run.date}
+                      </div>
+                      <div style={{ fontSize: '11px', color: SURFACE.textSubtle, marginTop: '2px' }}>
+                        {formatInvestmentHorizon(run.investment_horizon)}
+                      </div>
                     </div>
                     <ChevronRight size={14} color={SURFACE.textSubtle} />
                   </button>
@@ -882,10 +928,10 @@ const App = () => {
                   ? activeStatus.status === 'error'
                     ? activeStatus.error
                     : activeStatus.status === 'completed'
-                      ? `Trade date: ${activeStatus.date}`
+                      ? `Trade date: ${activeStatus.date} · Horizon: ${formatInvestmentHorizon(activeStatus.investment_horizon)}`
                       : commentary
                   : selectedRun
-                    ? `Reviewing the run from ${selectedRun.date}. Select a workflow node to inspect the reasoning path.`
+                    ? `Reviewing the run from ${selectedRun.date} · Horizon: ${formatInvestmentHorizon(selectedRun.investment_horizon)}. Select a workflow node to inspect the reasoning path.`
                     : 'Choose a recent run or trigger a new analysis to inspect the workflow and final recommendation.'}
               </div>
             </div>

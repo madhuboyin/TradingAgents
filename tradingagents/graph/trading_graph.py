@@ -443,13 +443,23 @@ class TradingAgentsGraph:
         logger.info("Node [%s] emitted update after %.2fs", node_name, node_elapsed)
 
     def _send_in_progress_webhook(
-        self, company_name, trade_date, node_name, now, start_time_iso, node_updates, perf_start, timing
+        self,
+        company_name,
+        trade_date,
+        node_name,
+        now,
+        start_time_iso,
+        node_updates,
+        perf_start,
+        timing,
+        investment_horizon,
     ):
         """Send a standardized in-progress update for the current node."""
         self._send_webhook({
             "run_id": self.run_id,
             "ticker": company_name,
             "date": trade_date,
+            "investment_horizon": investment_horizon,
             "node": node_name,
             "status": "in_progress",
             "timestamp": now.isoformat() + "Z",
@@ -472,6 +482,7 @@ class TradingAgentsGraph:
             "run_id": self.run_id,
             "ticker": company_name,
             "date": trade_date,
+            "investment_horizon": investment_horizon,
             "node": "Initializing...",
             "status": "in_progress",
             "timestamp": start_time_iso,
@@ -496,6 +507,7 @@ class TradingAgentsGraph:
             "run_id": self.run_id,
             "ticker": company_name,
             "date": trade_date,
+            "investment_horizon": resolved_horizon,
             "node": "Launching Analyst Branches...",
             "status": "in_progress",
             "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -530,6 +542,7 @@ class TradingAgentsGraph:
                     node_updates,
                     perf_start,
                     timing,
+                    resolved_horizon,
                 )
         except Exception as e:
             logger.error("Error during sync graph execution for %s: %s", company_name, e)
@@ -537,6 +550,7 @@ class TradingAgentsGraph:
                 "run_id": self.run_id,
                 "ticker": company_name,
                 "date": trade_date,
+                "investment_horizon": resolved_horizon,
                 "status": "error",
                 "error": str(e),
                 "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -560,6 +574,7 @@ class TradingAgentsGraph:
             "run_id": self.run_id,
             "ticker": company_name,
             "date": trade_date,
+            "investment_horizon": final_state.get("investment_horizon", resolved_horizon),
             "status": "completed",
             "timestamp": end_time_iso,
             "start_time": start_time_iso,
@@ -593,6 +608,7 @@ class TradingAgentsGraph:
             "run_id": self.run_id,
             "ticker": company_name,
             "date": trade_date,
+            "investment_horizon": investment_horizon,
             "node": "Initializing...",
             "status": "in_progress",
             "timestamp": start_time_iso,
@@ -618,6 +634,7 @@ class TradingAgentsGraph:
             "run_id": self.run_id,
             "ticker": company_name,
             "date": trade_date,
+            "investment_horizon": resolved_horizon,
             "node": "Launching Analyst Branches...",
             "status": "in_progress",
             "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -655,6 +672,7 @@ class TradingAgentsGraph:
                     node_updates,
                     perf_start,
                     timing,
+                    resolved_horizon,
                 )
         except Exception as e:
             logger.error("Error during graph execution for %s: %s", company_name, e)
@@ -662,6 +680,7 @@ class TradingAgentsGraph:
                 "run_id": self.run_id,
                 "ticker": company_name,
                 "date": trade_date,
+                "investment_horizon": resolved_horizon,
                 "status": "error",
                 "error": str(e),
                 "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -692,6 +711,7 @@ class TradingAgentsGraph:
             "run_id": self.run_id,
             "ticker": company_name,
             "date": trade_date,
+            "investment_horizon": final_state.get("investment_horizon", resolved_horizon),
             "status": "completed",
             "timestamp": end_time_iso,
             "start_time": start_time_iso,

@@ -113,6 +113,7 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
       sentiment: 'Monitors market mood by analyzing news sentiment and social signals.',
       news: 'Synthesizes macro headlines and tracks insider transactions.',
       fundamentals: 'Evaluates financial health using statements, ratios, and business quality.',
+      industry: 'Compares the target with direct peers to judge relative attractiveness, valuation, and quality.',
       bull: "Constructs the strongest possible 'buy' case by identifying positive catalysts.",
       bear: "Challenges the idea by identifying risks and potential 'sell' catalysts.",
       manager: 'Synthesizes competing researcher views into one balanced investment plan.',
@@ -125,6 +126,7 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
       sentiment: 'Market mood and signals',
       news: 'News and insider context',
       fundamentals: 'Financial quality check',
+      industry: 'Peer-relative context',
       bull: 'Upside case',
       bear: 'Risk case',
       manager: 'Thesis synthesis',
@@ -132,7 +134,7 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
       pm: 'Final decision',
     };
 
-    const order = ['market', 'sentiment', 'news', 'fundamentals', 'synchronizer', 'bull', 'bear', 'manager', 'trader', 'pm', 'end'];
+    const order = ['market', 'sentiment', 'news', 'fundamentals', 'industry', 'synchronizer', 'bull', 'bear', 'manager', 'trader', 'pm', 'end'];
 
     const getIsPast = (targetNode) => {
       if (isCompleted) return true;
@@ -144,12 +146,12 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
       );
     };
 
-    const areAnalystsDone = isCompleted || getIsPast('fundamentals') || completedNodes.some((node) => node.includes('synchronizer'));
+    const areAnalystsDone = isCompleted || getIsPast('industry') || completedNodes.some((node) => node.includes('synchronizer'));
 
     const isDone = (id) => {
       if (isCompleted) return true;
 
-      if (['market', 'sentiment', 'news', 'fundamentals'].includes(id)) {
+      if (['market', 'sentiment', 'news', 'fundamentals', 'industry'].includes(id)) {
         return completedNodes.some((node) => node.includes(id)) || areAnalystsDone;
       }
 
@@ -158,7 +160,7 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
 
     const isCurrentlyActive = (targetNode) => {
       if (isCompleted || isDone(targetNode)) return false;
-      if (isAnalystBootstrapping && ['market', 'sentiment', 'social', 'news', 'fundamentals'].includes(targetNode)) {
+      if (isAnalystBootstrapping && ['market', 'sentiment', 'social', 'news', 'fundamentals', 'industry'].includes(targetNode)) {
         return true;
       }
       return activeNode.includes(targetNode);
@@ -237,11 +239,24 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
         position: { x: 900, y: 150 },
       },
       {
+        id: 'industry',
+        type: 'agent',
+        data: createAgentData(
+          'industry',
+          'Industry / Peer Analyst',
+          descriptions.industry,
+          getStatus('industry'),
+          isDone('industry'),
+          isCurrentlyActive('industry')
+        ),
+        position: { x: 1200, y: 150 },
+      },
+      {
         id: 'sync',
         data: {
           label: 'Analyst Synchronizer',
         },
-        position: { x: 450, y: 300 },
+        position: { x: 600, y: 300 },
         style: {
           background: selectedAgentId === 'sync' ? '#1d4ed8' : isCurrentlyActive('synchronizer') ? '#eab308' : isDone('synchronizer') ? '#10b981' : '#1e293b',
           color: 'white',
@@ -327,10 +342,12 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
       { id: 'start-sentiment', source: 'start', target: 'sentiment', animated: isLive && !isDone('sentiment') },
       { id: 'start-news', source: 'start', target: 'news', animated: isLive && !isDone('news') },
       { id: 'start-fundamentals', source: 'start', target: 'fundamentals', animated: isLive && !isDone('fundamentals') },
+      { id: 'start-industry', source: 'start', target: 'industry', animated: isLive && !isDone('industry') },
       { id: 'market-sync', source: 'market', target: 'sync', animated: isLive && isCurrentlyActive('market') },
       { id: 'sentiment-sync', source: 'sentiment', target: 'sync', animated: isLive && (isCurrentlyActive('social') || isCurrentlyActive('sentiment')) },
       { id: 'news-sync', source: 'news', target: 'sync', animated: isLive && isCurrentlyActive('news') },
       { id: 'fundamentals-sync', source: 'fundamentals', target: 'sync', animated: isLive && isCurrentlyActive('fundamentals') },
+      { id: 'industry-sync', source: 'industry', target: 'sync', animated: isLive && isCurrentlyActive('industry') },
       { id: 'sync-bull', source: 'sync', target: 'bull', animated: isLive && isCurrentlyActive('synchronizer') },
       { id: 'sync-bear', source: 'sync', target: 'bear', animated: isLive && isCurrentlyActive('synchronizer') },
       { id: 'bull-manager', source: 'bull', target: 'manager', animated: isLive && isCurrentlyActive('bull') },

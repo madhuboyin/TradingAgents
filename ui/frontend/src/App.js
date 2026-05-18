@@ -13,6 +13,22 @@ import {
   X,
 } from 'lucide-react';
 
+const ANALYST_OPTIONS = [
+  { id: 'market', label: 'Market', helper: 'Trend and technical context' },
+  { id: 'social', label: 'Sentiment', helper: 'Market mood and crowd signals' },
+  { id: 'news', label: 'News', helper: 'Headlines, macro, and insider context' },
+  { id: 'fundamentals', label: 'Fundamentals', helper: 'Financial quality and valuation base' },
+  { id: 'industry', label: 'Industry / Peer', helper: 'Relative positioning and peer comparison' },
+];
+
+const ANALYST_REPORT_SECTIONS = [
+  { key: 'market_report', title: 'Market Analyst', helper: 'Trend, momentum, and technical framing.' },
+  { key: 'sentiment_report', title: 'Sentiment Analyst', helper: 'Retail, social, and narrative positioning.' },
+  { key: 'news_report', title: 'News Analyst', helper: 'Macro headlines, company developments, and insider context.' },
+  { key: 'fundamentals_report', title: 'Fundamentals Analyst', helper: 'Financial health, profitability, and balance-sheet quality.' },
+  { key: 'industry_report', title: 'Industry / Peer Comparison Analyst', helper: 'Relative valuation, margins, growth, and peer quality.' },
+];
+
 const SURFACE = {
   appBg: '#020617',
   panel: '#0f172a',
@@ -299,28 +315,6 @@ const SectionCard = ({ title, subtitle, icon: Icon, children, accent = SURFACE.b
   </section>
 );
 
-const SummaryMetric = ({ label, value, tone = SURFACE.text, helper }) => (
-  <div
-    style={{
-      background: SURFACE.panel,
-      border: `1px solid ${SURFACE.border}`,
-      borderRadius: '14px',
-      padding: '16px',
-      minHeight: '88px',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between',
-      gap: '8px',
-    }}
-  >
-    <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: SURFACE.textSubtle, fontWeight: 700 }}>
-      {label}
-    </div>
-    <div style={{ fontSize: '20px', fontWeight: 800, color: tone, lineHeight: 1.2 }}>{value}</div>
-    {helper && <div style={{ fontSize: '12px', color: SURFACE.textMuted }}>{helper}</div>}
-  </div>
-);
-
 const EmptyState = ({ title, body }) => (
   <div
     style={{
@@ -334,6 +328,32 @@ const EmptyState = ({ title, body }) => (
     <div style={{ fontSize: '16px', fontWeight: 700, color: SURFACE.text, marginBottom: '8px' }}>{title}</div>
     <div style={{ fontSize: '13px', lineHeight: 1.6 }}>{body}</div>
   </div>
+);
+
+const AnalystToggle = ({ option, checked, onChange }) => (
+  <label
+    style={{
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: '10px',
+      padding: '10px 12px',
+      borderRadius: '12px',
+      border: `1px solid ${checked ? SURFACE.blue : SURFACE.border}`,
+      background: checked ? 'rgba(59, 130, 246, 0.12)' : SURFACE.panel,
+      cursor: 'pointer',
+    }}
+  >
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={() => onChange(option.id)}
+      style={{ marginTop: '3px' }}
+    />
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: '13px', fontWeight: 700, color: SURFACE.text }}>{option.label}</div>
+      <div style={{ fontSize: '11px', color: SURFACE.textMuted, marginTop: '4px', lineHeight: 1.5 }}>{option.helper}</div>
+    </div>
+  </label>
 );
 
 const StatusBanner = ({ items }) => (
@@ -461,6 +481,7 @@ const App = () => {
   const [lastValidProgress, setLastValidProgress] = useState(5);
   const [portfolio, setPortfolio] = useState('');
   const [investmentHorizon, setInvestmentHorizon] = useState('short_term');
+  const [selectedAnalysts, setSelectedAnalysts] = useState(['market', 'social', 'news', 'fundamentals']);
   const [isSavingPortfolio, setIsSavingPortfolio] = useState(false);
   const [isTriggering, setIsTriggering] = useState(false);
   const [selectedRun, setSelectedRun] = useState(null);
@@ -546,6 +567,7 @@ const App = () => {
     if (node.includes('social') || node.includes('sentiment')) return 'Gauging market sentiment and social signals.';
     if (node.includes('news')) return 'Processing headlines, macro context, and insider activity.';
     if (node.includes('fundamental')) return 'Evaluating financial health and business fundamentals.';
+    if (node.includes('industry')) return 'Comparing the target against peers and industry alternatives.';
     if (node.includes('synchronizer')) return 'Combining analyst output into a single shared picture.';
     if (node.includes('bull')) return 'Constructing the strongest bullish case.';
     if (node.includes('bear')) return 'Stress-testing the idea with bearish scenarios.';
@@ -576,6 +598,7 @@ const App = () => {
       sentiment: 30,
       news: 40,
       fundamental: 50,
+      industry: 58,
       bull: 65,
       bear: 75,
       'research manager': 85,
@@ -698,7 +721,11 @@ const App = () => {
     fetch('/api/jobs/trigger', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tickers: portfolio, investment_horizon: investmentHorizon }),
+      body: JSON.stringify({
+        tickers: portfolio,
+        investment_horizon: investmentHorizon,
+        analysts: selectedAnalysts.join(','),
+      }),
     })
       .then((res) => {
         if (!res.ok) {
@@ -744,6 +771,18 @@ const App = () => {
     : isRunActive
       ? liveRunDetail?.investment_plan
       : (liveRunDetail?.investment_plan || runDetail?.investment_plan);
+  const currentAnalystReports = useMemo(() => {
+    const source = hasLiveCompletedRun
+      ? liveRunDetail
+      : isRunActive
+        ? (liveRunDetail || {})
+        : { ...(runDetail || {}), ...(liveRunDetail || {}) };
+
+    return ANALYST_REPORT_SECTIONS.map((section) => ({
+      ...section,
+      content: source?.[section.key] || '',
+    })).filter((section) => section.content);
+  }, [hasLiveCompletedRun, isRunActive, liveRunDetail, runDetail]);
   const activeStep = activeStatus?.active_node || (selectedAgent ? selectedAgent.label : 'Awaiting selection');
   const heroTitle = activeStatus
     ? activeStatus.status === 'error'
@@ -766,44 +805,22 @@ const App = () => {
   const decisionHeadline = parseDecisionHeadline(currentDecision);
   const ratingColor = getRatingColor(decisionHeadline);
 
-  const summaryMetrics = [
-    {
-      label: 'Decision',
-      value: parseDecisionHeadline(currentDecision),
-      tone: SURFACE.blueSoft,
-      helper: activeStatus && activeStatus.status !== 'completed' ? 'Updates after the analysis finishes.' : 'Latest completed recommendation.',
-    },
-    {
-      label: 'Status',
-      value: formatStatusLabel(activeStatus?.status || 'completed'),
-      tone: statusTone,
-      helper: activeStatus?.status === 'error' ? 'Run needs attention.' : activeStatus ? 'Live workflow state.' : 'Most recent selected run.',
-    },
-    {
-      label: 'Horizon',
-      value: formatInvestmentHorizon(currentHorizon),
-      tone: SURFACE.purple,
-      helper: 'Target holding period for this recommendation.',
-    },
-    {
-      label: 'Current Step',
-      value: activeStatus && activeStatus.status !== 'completed' ? activeStep : selectedAgent?.label || 'Review decision',
-      tone: SURFACE.amber,
-      helper: commentary || 'Select a node to inspect why it is part of the flow.',
-    },
-    {
-      label: elapsed ? 'Runtime' : 'History',
-      value: elapsed || `${runs.length} runs`,
-      tone: SURFACE.text,
-      helper: elapsed ? 'Elapsed or completed time.' : 'Recent analyses loaded.',
-    },
-  ];
-
   const detailTabs = [
     { id: 'decision', label: 'Decision' },
     { id: 'plan', label: 'Investment Plan' },
+    { id: 'analysts', label: 'Analyst Reports' },
     { id: 'history', label: 'History' },
   ];
+
+  const toggleAnalystSelection = (analystId) => {
+    setSelectedAnalysts((current) => {
+      if (current.includes(analystId)) {
+        if (current.length === 1) return current;
+        return current.filter((id) => id !== analystId);
+      }
+      return [...current, analystId];
+    });
+  };
 
   return (
     <div
@@ -894,6 +911,22 @@ const App = () => {
               </div>
               <div style={{ fontSize: '12px', color: SURFACE.textMuted, lineHeight: 1.6, marginBottom: '10px' }}>
                 Enter comma-separated tickers for the next analysis run.
+              </div>
+              <div style={{ fontSize: '12px', color: SURFACE.textMuted, marginBottom: '8px' }}>
+                Analyst lineup
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginBottom: '12px' }}>
+                {ANALYST_OPTIONS.map((option) => (
+                  <AnalystToggle
+                    key={option.id}
+                    option={option}
+                    checked={selectedAnalysts.includes(option.id)}
+                    onChange={toggleAnalystSelection}
+                  />
+                ))}
+              </div>
+              <div style={{ fontSize: '11px', color: SURFACE.textSubtle, lineHeight: 1.5, marginBottom: '12px' }}>
+                `Industry / Peer` is available on demand here, but not preselected by default so the dashboard preserves the current baseline recommendation path unless you opt in.
               </div>
               <label style={{ display: 'block', fontSize: '12px', color: SURFACE.textMuted, marginBottom: '8px' }}>
                 Investment horizon
@@ -1173,12 +1206,12 @@ const App = () => {
               )}
 
               <div style={{ marginTop: '20px' }}>
-                <SectionCard
-                  title="Decision workspace"
-                  subtitle="The most important output first, with the supporting plan and historical context one click away."
-                  icon={Target}
-                  accent={SURFACE.blue}
-                >
+              <SectionCard
+                title="Decision workspace"
+                subtitle="The most important output first, with the supporting plan, analyst reports, and historical context one click away."
+                icon={Target}
+                accent={SURFACE.blue}
+              >
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '18px' }}>
                     {detailTabs.map((tab) => {
                       const isActive = activeTab === tab.id;
@@ -1236,6 +1269,44 @@ const App = () => {
                       content={currentPlan}
                       emptyMessage="The investment plan will appear here once the run includes execution guidance."
                     />
+                  )}
+
+                  {activeTab === 'analysts' && (
+                    <>
+                      {currentAnalystReports.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                          {ANALYST_REPORT_SECTIONS.map((section) => {
+                            const content = currentAnalystReports.find((report) => report.key === section.key)?.content || '';
+                            if (!content) return null;
+
+                            return (
+                              <div
+                                key={section.key}
+                                style={{
+                                  padding: '18px',
+                                  background: SURFACE.panelAlt,
+                                  borderRadius: '16px',
+                                  border: `1px solid ${SURFACE.border}`,
+                                }}
+                              >
+                                <div style={{ fontSize: '11px', color: SURFACE.textSubtle, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '6px' }}>
+                                  {section.title}
+                                </div>
+                                <div style={{ fontSize: '12px', color: SURFACE.textMuted, lineHeight: 1.6, marginBottom: '14px' }}>
+                                  {section.helper}
+                                </div>
+                                <MarkdownContent content={content} />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <EmptyState
+                          title="No analyst reports available yet"
+                          body="Analyst reports appear here as soon as the selected run includes them. If you want Industry / Peer output, include that analyst in the next triggered run."
+                        />
+                      )}
+                    </>
                   )}
 
                   {activeTab === 'history' && (

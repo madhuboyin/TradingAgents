@@ -99,7 +99,7 @@ DEFAULT_CONFIG = _apply_env_overrides({
     # Increase for longer lookback strategies or to broaden macro coverage;
     # decrease to reduce token usage in agent prompts.
     "news_article_limit": 20,             # max articles per ticker (ticker-news)
-    "global_news_article_limit": 10,      # max articles for global/macro news
+    "global_news_article_limit": 6,       # max articles for global/macro news
     "global_news_lookback_days": 7,       # macro news lookback window
     "global_news_query_concurrency": 3,   # concurrent macro-news searches
     # Search queries used by get_global_news for macro headlines. Extend or

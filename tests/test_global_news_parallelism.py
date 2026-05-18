@@ -10,7 +10,7 @@ def _load_yfinance_news_module():
     fake_config = types.ModuleType("tradingagents.dataflows.config")
     fake_config.get_config = lambda: {
         "global_news_lookback_days": 7,
-        "global_news_article_limit": 10,
+        "global_news_article_limit": 6,
         "global_news_query_concurrency": 3,
         "global_news_queries": ["fed", "gdp", "oil"],
     }

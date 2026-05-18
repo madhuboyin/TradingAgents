@@ -37,13 +37,29 @@ def get_YFin_data_online(
         if col in data.columns:
             data[col] = data[col].round(2)
 
-    # Convert DataFrame to CSV string
-    csv_string = data.to_csv()
+    latest = data.iloc[-1]
+    first_close = float(data["Close"].iloc[0])
+    latest_close = float(latest["Close"])
+    period_return_pct = ((latest_close / first_close) - 1.0) * 100 if first_close else 0.0
+    period_high = float(data["High"].max())
+    period_low = float(data["Low"].min())
+    avg_volume = float(data["Volume"].mean()) if "Volume" in data.columns else 0.0
+    latest_volume = float(latest["Volume"]) if "Volume" in data.columns else 0.0
 
-    # Add header information
+    recent_rows = data.tail(15).copy()
+    csv_string = recent_rows.to_csv()
+
     header = f"# Stock data for {symbol.upper()} from {start_date} to {end_date}\n"
-    header += f"# Total records: {len(data)}\n"
+    header += f"# Total records available: {len(data)}\n"
     header += f"# Data retrieved on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+    header += "## Period Summary\n"
+    header += f"- Latest close: {latest_close:.2f}\n"
+    header += f"- Period return: {period_return_pct:+.2f}%\n"
+    header += f"- Period high / low: {period_high:.2f} / {period_low:.2f}\n"
+    if "Volume" in data.columns:
+        header += f"- Latest volume: {latest_volume:,.0f}\n"
+        header += f"- Average volume: {avg_volume:,.0f}\n"
+    header += "\n## Recent OHLCV (last 15 rows)\n\n"
 
     return header + csv_string
 

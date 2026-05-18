@@ -82,6 +82,7 @@ def get_news_yfinance(
 
         news_str = ""
         filtered_count = 0
+        seen_titles = set()
 
         for article in news:
             data = _extract_article_data(article)
@@ -92,11 +93,15 @@ def get_news_yfinance(
                 if not (start_dt <= pub_date_naive <= end_dt + relativedelta(days=1)):
                     continue
 
+            normalized_title = (data["title"] or "").strip().lower()
+            if normalized_title and normalized_title in seen_titles:
+                continue
+            if normalized_title:
+                seen_titles.add(normalized_title)
+
             news_str += f"### {data['title']} (source: {data['publisher']})\n"
             if data["summary"]:
                 news_str += f"{data['summary']}\n"
-            if data["link"]:
-                news_str += f"Link: {data['link']}\n"
             news_str += "\n"
             filtered_count += 1
 
@@ -191,19 +196,15 @@ def get_global_news_yfinance(
                         continue
                 title = data["title"]
                 publisher = data["publisher"]
-                link = data["link"]
                 summary = data["summary"]
             else:
                 title = article.get("title", "No title")
                 publisher = article.get("publisher", "Unknown")
-                link = article.get("link", "")
                 summary = ""
 
             news_str += f"### {title} (source: {publisher})\n"
             if summary:
                 news_str += f"{summary}\n"
-            if link:
-                news_str += f"Link: {link}\n"
             news_str += "\n"
 
         return f"## Global Market News, from {start_date} to {curr_date}:\n\n{news_str}"

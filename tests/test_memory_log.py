@@ -92,6 +92,10 @@ def _structured_pm_llm(captured: dict, decision: PortfolioDecision | None = None
             rating=PortfolioRating.HOLD,
             executive_summary="Hold the position; await catalyst.",
             investment_thesis="Balanced view; neither side carried the debate.",
+            recommendation_rationale="The balanced setup does not justify a more bullish or more bearish rating yet.",
+            strategic_actions="Maintain exposure and reassess after the next major catalyst.",
+            key_risks="Execution slip and weaker demand could break the thesis.",
+            key_catalysts="Upcoming earnings and new guidance will be decisive.",
         )
     structured = MagicMock()
     structured.invoke.side_effect = lambda prompt: (
@@ -713,6 +717,10 @@ class TestPortfolioManagerInjection:
             rating=PortfolioRating.OVERWEIGHT,
             executive_summary="Build position gradually over the next two weeks.",
             investment_thesis="AI capex cycle remains intact; institutional flows constructive.",
+            recommendation_rationale="The constructive evidence outweighs the risks, but valuation keeps the stance below Buy.",
+            strategic_actions="Build gradually and cap size until the next earnings confirmation.",
+            key_risks="Valuation compression and execution misses remain the main risks.",
+            key_catalysts="Upcoming earnings and order-book updates could strengthen the thesis.",
             price_target=215.0,
             time_horizon="3-6 months",
         )
@@ -723,6 +731,10 @@ class TestPortfolioManagerInjection:
         assert "**Rating**: Overweight" in md
         assert "**Executive Summary**: Build position gradually" in md
         assert "**Investment Thesis**: AI capex cycle" in md
+        assert "**Recommendation Rationale**: The constructive evidence outweighs the risks" in md
+        assert "**Strategic Actions**: Build gradually and cap size" in md
+        assert "**Key Risks**: Valuation compression" in md
+        assert "**Key Catalysts**: Upcoming earnings" in md
         assert "**Price Target**: 215.0" in md
         assert "**Time Horizon**: 3-6 months" in md
 

@@ -68,20 +68,29 @@ class TestRenderResearchPlan:
     def test_required_fields(self):
         p = ResearchPlan(
             recommendation=PortfolioRating.OVERWEIGHT,
-            rationale="Bull case carried; tailwinds intact.",
+            bull_case_summary="Bull case carried on durable demand and improving margins.",
+            bear_case_summary="Bear case remains focused on valuation and cyclical slowdown risk.",
+            why_this_rating="The bull case is stronger, but not enough for a full Buy because valuation leaves less room for error.",
             strategic_actions="Build position over two weeks; cap at 5%.",
+            monitoring_triggers="Watch next earnings for backlog conversion and any margin slippage.",
         )
         md = render_research_plan(p)
         assert "**Recommendation**: Overweight" in md
-        assert "**Rationale**: Bull case carried" in md
+        assert "**Bull Case Summary**: Bull case carried" in md
+        assert "**Bear Case Summary**: Bear case remains" in md
+        assert "**Why This Rating**: The bull case is stronger" in md
         assert "**Strategic Actions**: Build position" in md
+        assert "**Monitoring Triggers**: Watch next earnings" in md
 
     def test_all_5_tier_ratings_render(self):
         for rating in PortfolioRating:
             p = ResearchPlan(
                 recommendation=rating,
-                rationale="r",
+                bull_case_summary="b",
+                bear_case_summary="b2",
+                why_this_rating="w",
                 strategic_actions="s",
+                monitoring_triggers="m",
             )
             md = render_research_plan(p)
             assert f"**Recommendation**: {rating.value}" in md
@@ -207,8 +216,11 @@ def _structured_rm_llm(captured: dict, plan: ResearchPlan | None = None):
     if plan is None:
         plan = ResearchPlan(
             recommendation=PortfolioRating.HOLD,
-            rationale="Balanced view across both sides.",
+            bull_case_summary="Bull case highlights demand durability.",
+            bear_case_summary="Bear case highlights valuation risk.",
+            why_this_rating="Balanced evidence keeps the stock at Hold.",
             strategic_actions="Hold current position; reassess after earnings.",
+            monitoring_triggers="Watch earnings and guide revisions.",
         )
     structured = MagicMock()
     structured.invoke.side_effect = lambda prompt: (
@@ -225,16 +237,22 @@ class TestResearchManagerAgent:
         captured = {}
         plan = ResearchPlan(
             recommendation=PortfolioRating.OVERWEIGHT,
-            rationale="Bull case is stronger; AI tailwind intact.",
+            bull_case_summary="Bull case is stronger; AI tailwind intact.",
+            bear_case_summary="Bear case centers on elevated expectations and valuation.",
+            why_this_rating="The bull case wins, but elevated expectations keep the rating at Overweight instead of Buy.",
             strategic_actions="Build position gradually over two weeks.",
+            monitoring_triggers="Watch margins and bookings in the next print.",
         )
         llm = _structured_rm_llm(captured, plan)
         rm = create_research_manager(llm)
         result = rm(_make_rm_state())
         ip = result["investment_plan"]
         assert "**Recommendation**: Overweight" in ip
-        assert "**Rationale**: Bull case" in ip
+        assert "**Bull Case Summary**: Bull case" in ip
+        assert "**Bear Case Summary**: Bear case" in ip
+        assert "**Why This Rating**: The bull case wins" in ip
         assert "**Strategic Actions**: Build position" in ip
+        assert "**Monitoring Triggers**: Watch margins" in ip
 
     def test_prompt_uses_5_tier_rating_scale(self):
         """The RM prompt must list all five tiers so the schema enum matches user expectations."""
@@ -246,14 +264,15 @@ class TestResearchManagerAgent:
         for tier in ("Buy", "Overweight", "Hold", "Underweight", "Sell"):
             assert f"**{tier}**" in prompt, f"missing {tier} in prompt"
 
-    def test_prompt_requests_concise_high_signal_output(self):
+    def test_prompt_requests_balanced_specific_synthesis(self):
         captured = {}
         llm = _structured_rm_llm(captured)
         rm = create_research_manager(llm)
         rm(_make_rm_state())
 
         prompt = captured["prompt"]
-        assert "Keep the output concise and high-signal" in prompt
+        assert "capture the best bullish evidence separately" in prompt
+        assert "why the recommendation is not more bullish and not more bearish" in prompt
 
     def test_prompt_includes_horizon_guidance(self):
         captured = {}

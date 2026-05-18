@@ -28,7 +28,7 @@ def create_research_manager(llm):
 
         investment_debate_state = state["investment_debate_state"]
 
-        prompt = f"""As the Research Manager and debate facilitator, your role is to critically evaluate this round of debate and deliver a clear, actionable investment plan for the trader. Engage fully with both sides of the debate — cite specific data points, figures, and contrasting arguments rather than summarising vaguely. The richness of your synthesis directly determines the quality of the final recommendation.
+        prompt = f"""As the Research Manager and debate facilitator, your role is to critically evaluate this round of debate and deliver a clear, actionable investment plan for the trader. Engage fully with both sides of the debate — cite specific data points, figures, and contrasting arguments rather than summarising vaguely. Produce a balanced handoff that preserves the strongest bull case, the strongest bear case, why the final rating lands where it does, and the concrete triggers the trader should monitor.
 
 {horizon_prompt}
 
@@ -44,6 +44,12 @@ def create_research_manager(llm):
 - **Sell**: Strong conviction in the bear thesis; recommend exiting or avoiding the position
 
 Commit to a clear stance whenever the debate's strongest arguments warrant one; reserve Hold for situations where the evidence on both sides is genuinely balanced.
+
+In your synthesis:
+- capture the best bullish evidence separately from the best bearish evidence
+- explain why the recommendation is not more bullish and not more bearish
+- ground every conclusion in specific data points, metrics, or concrete analyst arguments
+- give the trader practical actions and monitoring triggers, not generic platitudes
 
 ---
 

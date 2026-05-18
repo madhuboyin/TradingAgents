@@ -106,22 +106,22 @@ def get_horizon_prompt(horizon: str | None, *, role: str) -> str:
             "long_term": "Focus on balance-sheet resilience, reinvestment capacity, capital allocation, and durability of earnings power over 3-5 years.",
         },
         "research": {
-            "short_term": "Weight catalysts, technicals, sentiment, and current macro regime more heavily than distant structural considerations.",
+            "short_term": "Give extra weight to near-term catalysts, technicals, sentiment, and the current macro regime, while still balancing business quality, valuation, and financial resilience.",
             "medium_term": "Balance current setup with industry dynamics, earnings durability, and valuation over the next 1-2 years.",
             "long_term": "Emphasize structural advantages, industry position, durability, and execution over short-term noise.",
         },
         "risk": {
-            "short_term": "Frame risks around event timing, volatility, downside catalysts, and tactical invalidation.",
+            "short_term": "Frame risks around near-term catalysts, volatility, downside triggers, and timing risk, but balance them against the underlying business and financial position.",
             "medium_term": "Frame risks around multi-quarter execution, earnings revision risk, macro sensitivity, and valuation compression.",
             "long_term": "Frame risks around moat erosion, capital allocation mistakes, balance-sheet weakness, and structural industry shifts.",
         },
         "trader": {
-            "short_term": "Produce an execution-minded recommendation suitable for a holding period of less than one year.",
+            "short_term": "Produce a recommendation suited to a holding period of less than one year. Emphasize executable levels and near-term catalysts, but do not overreact to short-term noise if the broader evidence remains balanced.",
             "medium_term": "Produce a recommendation suited to a 1-2 year holding period, emphasizing thesis durability over pure timing.",
             "long_term": "Produce a recommendation suited to a 3-5 year holding period, emphasizing durability and long-run compounding potential.",
         },
         "portfolio_manager": {
-            "short_term": "Optimize for a sub-1-year decision with clear catalysts, risk controls, and tactical invalidation.",
+            "short_term": "Weight near-term catalysts, risk controls, and timing more heavily for a sub-1-year decision, while still preserving a balanced view of the underlying business and financial evidence.",
             "medium_term": "Optimize for a 1-2 year decision with emphasis on earnings path, industry positioning, and valuation discipline.",
             "long_term": "Optimize for a 3-5 year decision with emphasis on durability, industry structure, management quality, and balance-sheet resilience.",
         },

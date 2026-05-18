@@ -49,7 +49,7 @@ def create_portfolio_manager(llm):
             else ""
         )
 
-        prompt = f"""As the Portfolio Manager, synthesize the risk analysts' debate and deliver the final trading decision. Ground every conclusion in specific evidence from the debate — cite figures, ratios, and analyst arguments explicitly. Produce a thorough executive summary, investment thesis, recommendation rationale, and strategic action plan with concrete triggers and conditions.
+        prompt = f"""As the Portfolio Manager, synthesize the risk analysts' debate and deliver the final trading decision. Ground every conclusion in specific evidence from the debate — cite figures, ratios, and analyst arguments explicitly. Produce a decision that clearly separates the core thesis, the rationale for the rating, the concrete action plan, the main risks, and the key catalysts.
 
 {horizon_prompt}
 
@@ -72,6 +72,12 @@ def create_portfolio_manager(llm):
 {history}
 
 ---
+
+In your synthesis:
+- reflect both the supporting and opposing evidence
+- explain why the final rating is not more bullish and not more bearish
+- distinguish between business quality, financial profile, valuation, technical setup, and timing where relevant
+- provide concrete strategic actions and monitoring conditions rather than generic advice
 
 Be decisive and ground every conclusion in specific evidence from the analysts.{get_language_instruction()}"""
 

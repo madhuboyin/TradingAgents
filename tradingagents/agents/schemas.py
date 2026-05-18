@@ -75,18 +75,41 @@ class ResearchPlan(BaseModel):
             "the side with the stronger arguments."
         ),
     )
-    rationale: str = Field(
+    bull_case_summary: str = Field(
         description=(
-            "Conversational summary of the key points from both sides of the "
-            "debate, ending with which arguments led to the recommendation. "
-            "Speak naturally, as if to a teammate. Two to four sentences."
+            "Specific summary of the strongest bullish arguments, citing the "
+            "data points, catalysts, and metrics that support a more positive stance. "
+            "Keep it concise but substantive."
+        ),
+    )
+    bear_case_summary: str = Field(
+        description=(
+            "Specific summary of the strongest bearish arguments, citing the "
+            "data points, risks, and metrics that support a more cautious stance. "
+            "Keep it concise but substantive."
+        ),
+    )
+    why_this_rating: str = Field(
+        description=(
+            "Balanced explanation of why the final rating lands where it does. "
+            "Explain why the stock is not rated more bullish and not rated more "
+            "bearish, and identify which evidence ultimately carried the decision. "
+            "Be concise but specific."
         ),
     )
     strategic_actions: str = Field(
         description=(
             "Concrete steps for the trader to implement the recommendation, "
             "including position sizing guidance consistent with the rating. "
-            "Keep this concise and practical, ideally one to three short steps."
+            "Keep this practical and specific, with clear actions, conditions, "
+            "or thresholds where useful."
+        ),
+    )
+    monitoring_triggers: str = Field(
+        description=(
+            "Key metrics, catalysts, price levels, or business developments to "
+            "monitor after the decision. Include what would strengthen the thesis "
+            "and what would invalidate it. Keep it concise but actionable."
         ),
     )
 
@@ -96,9 +119,15 @@ def render_research_plan(plan: ResearchPlan) -> str:
     return "\n".join([
         f"**Recommendation**: {plan.recommendation.value}",
         "",
-        f"**Rationale**: {plan.rationale}",
+        f"**Bull Case Summary**: {plan.bull_case_summary}",
+        "",
+        f"**Bear Case Summary**: {plan.bear_case_summary}",
+        "",
+        f"**Why This Rating**: {plan.why_this_rating}",
         "",
         f"**Strategic Actions**: {plan.strategic_actions}",
+        "",
+        f"**Monitoring Triggers**: {plan.monitoring_triggers}",
     ])
 
 
@@ -122,7 +151,8 @@ class TraderProposal(BaseModel):
     reasoning: str = Field(
         description=(
             "The case for this action, anchored in the analysts' reports and "
-            "the research plan. Two to three sentences."
+            "the research plan. Be concise but specific, and cite the evidence "
+            "that most directly justifies the action."
         ),
     )
     entry_price: Optional[float] = Field(
@@ -186,16 +216,42 @@ class PortfolioDecision(BaseModel):
     )
     executive_summary: str = Field(
         description=(
-            "A concise action plan covering entry strategy, position sizing, "
-            "key risk levels, and time horizon. Two to three sentences."
+            "A concise but substantive action plan covering the current stance, "
+            "how to manage exposure, and the practical next step for the stated horizon."
         ),
     )
     investment_thesis: str = Field(
         description=(
-            "Detailed reasoning anchored in specific evidence from the analysts' "
-            "debate. If prior lessons are referenced in the prompt context, "
-            "incorporate them; otherwise rely solely on the current analysis. "
-            "Keep it compact and high-signal, ideally one short paragraph."
+            "Core thesis anchored in specific evidence from the analysts' debate. "
+            "Explain the business, financial, valuation, technical, and sentiment "
+            "factors that matter most for this rating. If prior lessons are referenced "
+            "in the prompt context, incorporate them; otherwise rely solely on the current analysis."
+        ),
+    )
+    recommendation_rationale: str = Field(
+        description=(
+            "Balanced explanation of why the final rating is appropriate. "
+            "Explicitly address the strongest opposing arguments and explain why "
+            "the recommendation is not more bullish and not more bearish."
+        ),
+    )
+    strategic_actions: str = Field(
+        description=(
+            "Concrete next steps for managing the position, including exposure, "
+            "risk management, entries or exits, and the key conditions that would "
+            "justify changing the stance."
+        ),
+    )
+    key_risks: str = Field(
+        description=(
+            "Most important downside risks or failure modes that could hurt the thesis. "
+            "Be specific and grounded in the current analysis."
+        ),
+    )
+    key_catalysts: str = Field(
+        description=(
+            "Most important catalysts, milestones, or confirmations that could strengthen "
+            "or weaken the thesis over the selected horizon."
         ),
     )
     price_target: Optional[float] = Field(
@@ -222,6 +278,14 @@ def render_pm_decision(decision: PortfolioDecision) -> str:
         f"**Executive Summary**: {decision.executive_summary}",
         "",
         f"**Investment Thesis**: {decision.investment_thesis}",
+        "",
+        f"**Recommendation Rationale**: {decision.recommendation_rationale}",
+        "",
+        f"**Strategic Actions**: {decision.strategic_actions}",
+        "",
+        f"**Key Risks**: {decision.key_risks}",
+        "",
+        f"**Key Catalysts**: {decision.key_catalysts}",
     ]
     if decision.price_target is not None:
         parts.extend(["", f"**Price Target**: {decision.price_target}"])

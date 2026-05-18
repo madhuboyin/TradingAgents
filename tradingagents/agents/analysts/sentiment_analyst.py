@@ -40,6 +40,27 @@ def _seven_days_back(trade_date: str) -> str:
     return (datetime.strptime(trade_date, "%Y-%m-%d") - timedelta(days=7)).strftime("%Y-%m-%d")
 
 
+def _compress_news_for_sentiment(news_block: str, max_headlines: int = 6) -> str:
+    """Keep only a small institutional-news signal for the sentiment branch."""
+    if not news_block:
+        return "<news unavailable>"
+
+    lines = [line.strip() for line in news_block.splitlines() if line.strip()]
+    selected = []
+    for line in lines:
+        if line.startswith("### "):
+            selected.append(line)
+        elif selected and not line.startswith("## "):
+            # Preserve at most one short summary/excerpt line after a headline.
+            selected.append(line)
+        if len([l for l in selected if l.startswith("### ")]) >= max_headlines:
+            break
+
+    if not selected:
+        return news_block
+    return "\n".join(selected)
+
+
 @functools.lru_cache(maxsize=128)
 def _cached_news_block(ticker: str, start_date: str, end_date: str) -> str:
     return get_news.func(ticker, start_date, end_date)
@@ -121,7 +142,9 @@ def create_sentiment_analyst(llm):
             "ticker": ticker,
             "end_date": end_date,
             "instrument_context": instrument_context,
-            "news_block": results.get("news", "<news unavailable>"),
+            "news_block": _compress_news_for_sentiment(
+                results.get("news", "<news unavailable>")
+            ),
             "stocktwits_block": results.get("stocktwits", "<stocktwits unavailable>"),
             "reddit_block": results.get("reddit", "<reddit unavailable>"),
         }
@@ -197,7 +220,7 @@ def _build_system_message(
 ## Data sources (pre-fetched, in this prompt)
 
 ### News headlines — Yahoo Finance, past 7 days
-Institutional framing. Fact-driven, slower-moving signal.
+Institutional framing. Fact-driven, slower-moving signal. Use this as a light cross-check against social sentiment, not as the primary news-analysis branch.
 
 <start_of_news>
 {news_block}

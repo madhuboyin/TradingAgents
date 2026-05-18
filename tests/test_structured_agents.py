@@ -159,6 +159,18 @@ class TestTraderAgent:
         result = trader(_make_trader_state())
         assert result["trader_investment_plan"] == plain_response
 
+    def test_does_not_retry_plain_invoke_for_schema_failure(self):
+        llm = MagicMock()
+        structured = MagicMock()
+        structured.invoke.side_effect = ValueError("schema validation failed")
+        llm.with_structured_output.return_value = structured
+        trader = create_trader(llm)
+
+        with pytest.raises(ValueError):
+            trader(_make_trader_state())
+
+        llm.invoke.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # Research Manager agent: structured happy path + fallback

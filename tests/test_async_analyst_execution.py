@@ -31,6 +31,7 @@ class _FakeChain:
     def __init__(self):
         self.ainvoke_calls = 0
         self.invoke_calls = 0
+        self.prompt_partials = {}
 
     async def ainvoke(self, messages):
         self.ainvoke_calls += 1
@@ -44,11 +45,14 @@ class _FakeChain:
 class _FakePrompt:
     def __init__(self, chain):
         self.chain = chain
+        self.partials = {}
 
     def partial(self, **kwargs):
+        self.partials.update(kwargs)
         return self
 
     def __or__(self, other):
+        self.chain.prompt_partials = dict(self.partials)
         return self.chain
 
 
@@ -141,3 +145,19 @@ def test_market_analyst_uses_ainvoke():
     assert chain.ainvoke_calls == 1
     assert chain.invoke_calls == 0
     assert result["market_report"] == "async report"
+
+
+def test_market_analyst_prompt_requests_batched_indicator_call():
+    chain = _FakeChain()
+    module = _load_market_module(chain)
+    analyst = module.create_market_analyst(_FakeLLM())
+
+    state = {
+        "trade_date": "2026-05-15",
+        "company_of_interest": "SHOP",
+        "market_messages": [_HumanMessage("SHOP")],
+    }
+
+    analyst.invoke(state)
+
+    assert "call get_indicators **once** with a comma-separated list" in chain.prompt_partials["system_message"]

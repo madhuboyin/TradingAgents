@@ -19,13 +19,38 @@ all three agents log the same warnings when fallback fires.
 from __future__ import annotations
 
 import logging
+from json import JSONDecodeError
 from typing import Any, Callable, Optional, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
+
+
+def _is_parse_or_schema_failure(exc: Exception) -> bool:
+    """Best-effort classifier for failures that should not trigger a second full LLM call."""
+    if isinstance(exc, (ValidationError, ValueError, TypeError, JSONDecodeError)):
+        return True
+
+    name = type(exc).__name__.lower()
+    message = str(exc).lower()
+    markers = (
+        "parse", "parser", "json", "schema", "validation",
+        "outputparser", "structured output", "tool schema",
+    )
+    return any(marker in name or marker in message for marker in markers)
+
+
+def _extract_fallback_text(exc: Exception) -> Optional[str]:
+    """Best-effort recovery of raw model text from parser/schema exceptions."""
+    candidate_attrs = ("llm_output", "raw_output", "text", "output", "message")
+    for attr in candidate_attrs:
+        value = getattr(exc, attr, None)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
 
 
 def bind_structured(llm: Any, schema: type[T], agent_name: str) -> Optional[Any]:
@@ -64,6 +89,16 @@ def invoke_structured_or_freetext(
             result = structured_llm.invoke(prompt)
             return render(result)
         except Exception as exc:
+            if _is_parse_or_schema_failure(exc):
+                recovered = _extract_fallback_text(exc)
+                logger.warning(
+                    "%s: structured-output invocation failed (%s); skipping duplicate free-text retry",
+                    agent_name, exc,
+                )
+                if recovered:
+                    return recovered
+                raise
+
             logger.warning(
                 "%s: structured-output invocation failed (%s); retrying once as free text",
                 agent_name, exc,

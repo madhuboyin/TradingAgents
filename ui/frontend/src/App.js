@@ -523,7 +523,9 @@ const App = () => {
           setElapsed(`${mins}m ${secs}s`);
         }
       } else {
-        setElapsed(null);
+        // Only clear elapsed when nothing is selected — preserve it while runDetail is loading
+        // to prevent the "Runtime ↔ History" flicker during the null-loading gap.
+        if (!selectedRun) setElapsed(null);
       }
     };
 
@@ -534,7 +536,7 @@ const App = () => {
     }
 
     return () => clearInterval(interval);
-  }, [activeStatus, runDetail]);
+  }, [activeStatus, runDetail, selectedRun]);
 
   const commentary = useMemo(() => {
     if (!activeStatus) return null;

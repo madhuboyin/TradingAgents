@@ -783,6 +783,19 @@ const App = () => {
       content: source?.[section.key] || '',
     })).filter((section) => section.content);
   }, [hasLiveCompletedRun, isRunActive, liveRunDetail, runDetail]);
+  const graphAnalystSelection = useMemo(() => {
+    if (isRunActive) return selectedAnalysts;
+
+    const source = liveRunDetail || runDetail || {};
+    const derived = [];
+    if (source.market_report) derived.push('market');
+    if (source.sentiment_report) derived.push('social');
+    if (source.news_report) derived.push('news');
+    if (source.fundamentals_report) derived.push('fundamentals');
+    if (source.industry_report) derived.push('industry');
+
+    return derived.length > 0 ? derived : selectedAnalysts;
+  }, [isRunActive, selectedAnalysts, liveRunDetail, runDetail]);
   const activeStep = activeStatus?.active_node || (selectedAgent ? selectedAgent.label : 'Awaiting selection');
   const heroTitle = activeStatus
     ? activeStatus.status === 'error'
@@ -845,6 +858,7 @@ const App = () => {
           position: 'relative',
           background: 'rgba(2, 6, 23, 0.82)',
           backdropFilter: 'blur(14px)',
+          height: isNarrow ? 'auto' : '100vh',
         }}
       >
         <div
@@ -911,22 +925,6 @@ const App = () => {
               </div>
               <div style={{ fontSize: '12px', color: SURFACE.textMuted, lineHeight: 1.6, marginBottom: '10px' }}>
                 Enter comma-separated tickers for the next analysis run.
-              </div>
-              <div style={{ fontSize: '12px', color: SURFACE.textMuted, marginBottom: '8px' }}>
-                Analyst lineup
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginBottom: '12px' }}>
-                {ANALYST_OPTIONS.map((option) => (
-                  <AnalystToggle
-                    key={option.id}
-                    option={option}
-                    checked={selectedAnalysts.includes(option.id)}
-                    onChange={toggleAnalystSelection}
-                  />
-                ))}
-              </div>
-              <div style={{ fontSize: '11px', color: SURFACE.textSubtle, lineHeight: 1.5, marginBottom: '12px' }}>
-                `Industry / Peer` is available on demand here, but not preselected by default so the dashboard preserves the current baseline recommendation path unless you opt in.
               </div>
               <label style={{ display: 'block', fontSize: '12px', color: SURFACE.textMuted, marginBottom: '8px' }}>
                 Investment horizon
@@ -1019,9 +1017,26 @@ const App = () => {
                     ? 'Triggering...'
                     : 'Run analysis'}
               </button>
+
+              <div style={{ fontSize: '12px', color: SURFACE.textMuted, marginTop: '16px', marginBottom: '8px' }}>
+                Analyst lineup
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginBottom: '12px' }}>
+                {ANALYST_OPTIONS.map((option) => (
+                  <AnalystToggle
+                    key={option.id}
+                    option={option}
+                    checked={selectedAnalysts.includes(option.id)}
+                    onChange={toggleAnalystSelection}
+                  />
+                ))}
+              </div>
+              <div style={{ fontSize: '11px', color: SURFACE.textSubtle, lineHeight: 1.5 }}>
+                `Industry / Peer` is available on demand here, but not preselected by default so the dashboard preserves the current baseline recommendation path unless you opt in.
+              </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '14px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '14px', minHeight: 0 }}>
               <div style={{ fontSize: '12px', color: SURFACE.textSubtle, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px', paddingLeft: '6px' }}>
                 Recent runs
               </div>
@@ -1098,7 +1113,7 @@ const App = () => {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <header style={{ padding: '24px', borderBottom: `1px solid ${SURFACE.border}`, background: 'rgba(2, 6, 23, 0.72)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isCompact ? 'flex-start' : 'center', gap: '16px', flexDirection: isCompact ? 'column' : 'row' }}>
-            <div style={{ maxWidth: '760px' }}>
+            <div style={{ maxWidth: isCompact ? '100%' : 'none', minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                 <span style={{ color: statusTone, fontSize: '18px' }}>●</span>
                 <span style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.08em', color: SURFACE.textMuted, fontWeight: 700 }}>
@@ -1106,7 +1121,17 @@ const App = () => {
                 </span>
               </div>
               <h2 style={{ margin: 0, fontSize: isNarrow ? '28px' : '32px', lineHeight: 1.1 }}>{heroTitle}</h2>
-              <div style={{ fontSize: '14px', color: activeStatus?.status === 'error' ? SURFACE.red : SURFACE.textMuted, marginTop: '10px', lineHeight: 1.6 }}>
+              <div
+                style={{
+                  fontSize: '14px',
+                  color: activeStatus?.status === 'error' ? SURFACE.red : SURFACE.textMuted,
+                  marginTop: '10px',
+                  lineHeight: 1.6,
+                  whiteSpace: isCompact ? 'normal' : 'nowrap',
+                  overflow: isCompact ? 'visible' : 'hidden',
+                  textOverflow: isCompact ? 'clip' : 'ellipsis',
+                }}
+              >
                 {activeStatus
                   ? activeStatus.status === 'error'
                     ? activeStatus.error
@@ -1193,6 +1218,7 @@ const App = () => {
                 <FlowGraph
                   runData={runDetail}
                   activeStatus={activeStatus}
+                  selectedAnalysts={graphAnalystSelection}
                   onNodeClick={setSelectedAgent}
                   selectedAgentId={selectedAgent?.id}
                 />

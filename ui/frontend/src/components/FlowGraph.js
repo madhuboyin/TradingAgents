@@ -2,6 +2,10 @@ import React, { useMemo, useState } from 'react';
 import ReactFlow, { Background, Controls, Handle, Position } from 'reactflow';
 import 'reactflow/dist/style.css';
 
+const AGENT_NODE_WIDTH = 190;
+const DEFAULT_ANALYST_ORDER = ['market', 'sentiment', 'news', 'fundamentals'];
+const ANALYST_NODE_ORDER = ['market', 'sentiment', 'news', 'fundamentals', 'industry'];
+
 const AgentNode = ({ data }) => {
   const isSelected = data.isSelected;
   const isActive = data.isActive;
@@ -32,7 +36,7 @@ const AgentNode = ({ data }) => {
         background: getBgColor(),
         color: 'white',
         border: `2px solid ${getBorderColor()}`,
-        width: '190px',
+        width: `${AGENT_NODE_WIDTH}px`,
         fontSize: '12px',
         boxShadow: isSelected
           ? '0 0 24px rgba(59, 130, 246, 0.45)'
@@ -86,7 +90,16 @@ const AgentNode = ({ data }) => {
             boxShadow: '0 8px 24px rgba(15, 23, 42, 0.45)',
           }}
         >
-          <div style={{ fontWeight: 700, fontSize: '11px', marginBottom: '6px', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <div
+            style={{
+              fontWeight: 700,
+              fontSize: '11px',
+              marginBottom: '6px',
+              color: '#60a5fa',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+            }}
+          >
             Purpose
           </div>
           <div style={{ fontSize: '11px', lineHeight: 1.5 }}>{data.description}</div>
@@ -100,7 +113,7 @@ const nodeTypes = {
   agent: AgentNode,
 };
 
-const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
+const FlowGraph = ({ runData, activeStatus, selectedAnalysts = DEFAULT_ANALYST_ORDER, onNodeClick, selectedAgentId }) => {
   const { nodes, edges } = useMemo(() => {
     const isLive = !!activeStatus;
     const isCompleted = activeStatus?.status === 'completed';
@@ -134,7 +147,23 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
       pm: 'Final decision',
     };
 
-    const order = ['market', 'sentiment', 'news', 'fundamentals', 'industry', 'synchronizer', 'bull', 'bear', 'manager', 'trader', 'pm', 'end'];
+    const hasIndustryData = Boolean(
+      runData?.industry_report ||
+      activeStatus?.updates?.industry_report ||
+      completedNodes.some((node) => node.includes('industry')) ||
+      activeNode.includes('industry')
+    );
+
+    const requestedAnalysts = Array.isArray(selectedAnalysts) && selectedAnalysts.length > 0
+      ? selectedAnalysts
+      : DEFAULT_ANALYST_ORDER;
+
+    const analystIds = ANALYST_NODE_ORDER.filter((id) => {
+      if (requestedAnalysts.includes(id)) return true;
+      return id === 'industry' ? hasIndustryData : false;
+    });
+
+    const order = [...analystIds, 'synchronizer', 'bull', 'bear', 'manager', 'trader', 'pm', 'end'];
 
     const getIsPast = (targetNode) => {
       if (isCompleted) return true;
@@ -146,13 +175,13 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
       );
     };
 
-    const areAnalystsDone = isCompleted || getIsPast('industry') || completedNodes.some((node) => node.includes('synchronizer'));
+    const analystCompletionGate = isCompleted || getIsPast('synchronizer') || completedNodes.some((node) => node.includes('synchronizer'));
 
     const isDone = (id) => {
       if (isCompleted) return true;
 
-      if (['market', 'sentiment', 'news', 'fundamentals', 'industry'].includes(id)) {
-        return completedNodes.some((node) => node.includes(id)) || areAnalystsDone;
+      if (analystIds.includes(id)) {
+        return completedNodes.some((node) => node.includes(id)) || analystCompletionGate;
       }
 
       return getIsPast(id) || completedNodes.some((node) => node.includes(id));
@@ -160,7 +189,7 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
 
     const isCurrentlyActive = (targetNode) => {
       if (isCompleted || isDone(targetNode)) return false;
-      if (isAnalystBootstrapping && ['market', 'sentiment', 'social', 'news', 'fundamentals', 'industry'].includes(targetNode)) {
+      if (isAnalystBootstrapping && [...analystIds, 'social'].includes(targetNode)) {
         return true;
       }
       return activeNode.includes(targetNode);
@@ -183,12 +212,25 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
       isSelected: selectedAgentId === id,
     });
 
+    const analystSpacing = analystIds.length >= 5 ? 240 : 255;
+    const totalAnalystWidth = (analystIds.length - 1) * analystSpacing;
+    const centerX = totalAnalystWidth / 2;
+    const startNodeWidth = 180;
+    const syncNodeWidth = 190;
+    const verticalX = centerX - AGENT_NODE_WIDTH / 2;
+    const syncX = centerX - syncNodeWidth / 2;
+
+    const analystPositions = analystIds.reduce((acc, id, index) => {
+      acc[id] = { x: index * analystSpacing, y: 145 };
+      return acc;
+    }, {});
+
     const rawNodes = [
       {
         id: 'start',
         type: 'input',
         data: { label: 'Start' },
-        position: { x: 450, y: 0 },
+        position: { x: centerX - startNodeWidth / 2, y: 0 },
         style: {
           background: '#111c31',
           color: 'white',
@@ -196,74 +238,38 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
           borderRadius: '10px',
           padding: '10px 14px',
           fontWeight: 700,
-          width: '180px',
+          width: `${startNodeWidth}px`,
           textAlign: 'center',
         },
       },
-      {
-        id: 'market',
-        type: 'agent',
-        data: createAgentData('market', 'Market Analyst', descriptions.market, getStatus('market'), isDone('market'), isCurrentlyActive('market')),
-        position: { x: 0, y: 150 },
-      },
-      {
-        id: 'sentiment',
+      ...analystIds.map((id) => ({
+        id,
         type: 'agent',
         data: createAgentData(
-          'sentiment',
-          'Sentiment Analyst',
-          descriptions.sentiment,
-          isCurrentlyActive('sentiment') || isCurrentlyActive('social') ? 'Active' : isDone('sentiment') || isDone('social') ? 'Complete' : 'Pending',
-          isDone('sentiment') || isDone('social'),
-          isCurrentlyActive('sentiment') || isCurrentlyActive('social')
+          id,
+          id === 'industry' ? 'Industry / Peer Analyst' : `${id === 'sentiment' ? 'Sentiment' : id.charAt(0).toUpperCase() + id.slice(1)} Analyst`,
+          descriptions[id],
+          id === 'sentiment'
+            ? (isCurrentlyActive('sentiment') || isCurrentlyActive('social') ? 'Active' : isDone('sentiment') || isDone('social') ? 'Complete' : 'Pending')
+            : getStatus(id),
+          id === 'sentiment' ? (isDone('sentiment') || isDone('social')) : isDone(id),
+          id === 'sentiment' ? (isCurrentlyActive('sentiment') || isCurrentlyActive('social')) : isCurrentlyActive(id)
         ),
-        position: { x: 300, y: 150 },
-      },
-      {
-        id: 'news',
-        type: 'agent',
-        data: createAgentData('news', 'News Analyst', descriptions.news, getStatus('news'), isDone('news'), isCurrentlyActive('news')),
-        position: { x: 600, y: 150 },
-      },
-      {
-        id: 'fundamentals',
-        type: 'agent',
-        data: createAgentData(
-          'fundamentals',
-          'Fundamentals Analyst',
-          descriptions.fundamentals,
-          getStatus('fundamentals'),
-          isDone('fundamentals'),
-          isCurrentlyActive('fundamentals')
-        ),
-        position: { x: 900, y: 150 },
-      },
-      {
-        id: 'industry',
-        type: 'agent',
-        data: createAgentData(
-          'industry',
-          'Industry / Peer Analyst',
-          descriptions.industry,
-          getStatus('industry'),
-          isDone('industry'),
-          isCurrentlyActive('industry')
-        ),
-        position: { x: 1200, y: 150 },
-      },
+        position: analystPositions[id],
+      })),
       {
         id: 'sync',
         data: {
           label: 'Analyst Synchronizer',
         },
-        position: { x: 600, y: 300 },
+        position: { x: syncX, y: 300 },
         style: {
           background: selectedAgentId === 'sync' ? '#1d4ed8' : isCurrentlyActive('synchronizer') ? '#eab308' : isDone('synchronizer') ? '#10b981' : '#1e293b',
           color: 'white',
           border: `2px solid ${selectedAgentId === 'sync' ? '#93c5fd' : isDone('synchronizer') ? '#34d399' : '#475569'}`,
           borderRadius: '12px',
           padding: '12px',
-          width: '190px',
+          width: `${syncNodeWidth}px`,
           textAlign: 'center',
           fontWeight: 700,
         },
@@ -272,13 +278,13 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
         id: 'bull',
         type: 'agent',
         data: createAgentData('bull', 'Bull Researcher', descriptions.bull, getStatus('bull'), isDone('bull'), isCurrentlyActive('bull')),
-        position: { x: 300, y: 450 },
+        position: { x: centerX - AGENT_NODE_WIDTH - 45, y: 450 },
       },
       {
         id: 'bear',
         type: 'agent',
         data: createAgentData('bear', 'Bear Researcher', descriptions.bear, getStatus('bear'), isDone('bear'), isCurrentlyActive('bear')),
-        position: { x: 600, y: 450 },
+        position: { x: centerX + 45, y: 450 },
       },
       {
         id: 'manager',
@@ -291,7 +297,7 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
           isDone('manager'),
           isCurrentlyActive('manager')
         ),
-        position: { x: 450, y: 600 },
+        position: { x: verticalX, y: 600 },
       },
       {
         id: 'trader',
@@ -304,7 +310,7 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
           isDone('trader'),
           isCurrentlyActive('trader')
         ),
-        position: { x: 450, y: 750 },
+        position: { x: verticalX, y: 750 },
       },
       {
         id: 'pm',
@@ -317,13 +323,13 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
           isDone('pm'),
           isCurrentlyActive('risk') || isCurrentlyActive('portfolio')
         ),
-        position: { x: 450, y: 900 },
+        position: { x: verticalX, y: 900 },
       },
       {
         id: 'end',
         type: 'output',
         data: { label: 'Decision Reached' },
-        position: { x: 450, y: 1050 },
+        position: { x: centerX - 95, y: 1050 },
         style: {
           background: isCompleted ? '#10b981' : '#111c31',
           color: 'white',
@@ -338,16 +344,22 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
     ];
 
     const rawEdges = [
-      { id: 'start-market', source: 'start', target: 'market', animated: isLive && !isDone('market') },
-      { id: 'start-sentiment', source: 'start', target: 'sentiment', animated: isLive && !isDone('sentiment') },
-      { id: 'start-news', source: 'start', target: 'news', animated: isLive && !isDone('news') },
-      { id: 'start-fundamentals', source: 'start', target: 'fundamentals', animated: isLive && !isDone('fundamentals') },
-      { id: 'start-industry', source: 'start', target: 'industry', animated: isLive && !isDone('industry') },
-      { id: 'market-sync', source: 'market', target: 'sync', animated: isLive && isCurrentlyActive('market') },
-      { id: 'sentiment-sync', source: 'sentiment', target: 'sync', animated: isLive && (isCurrentlyActive('social') || isCurrentlyActive('sentiment')) },
-      { id: 'news-sync', source: 'news', target: 'sync', animated: isLive && isCurrentlyActive('news') },
-      { id: 'fundamentals-sync', source: 'fundamentals', target: 'sync', animated: isLive && isCurrentlyActive('fundamentals') },
-      { id: 'industry-sync', source: 'industry', target: 'sync', animated: isLive && isCurrentlyActive('industry') },
+      ...analystIds.map((id) => ({
+        id: `start-${id}`,
+        source: 'start',
+        target: id,
+        animated: isLive && !isDone(id),
+      })),
+      ...analystIds.map((id) => ({
+        id: `${id}-sync`,
+        source: id,
+        target: 'sync',
+        animated: isLive && (
+          id === 'sentiment'
+            ? (isCurrentlyActive('social') || isCurrentlyActive('sentiment'))
+            : isCurrentlyActive(id)
+        ),
+      })),
       { id: 'sync-bull', source: 'sync', target: 'bull', animated: isLive && isCurrentlyActive('synchronizer') },
       { id: 'sync-bear', source: 'sync', target: 'bear', animated: isLive && isCurrentlyActive('synchronizer') },
       { id: 'bull-manager', source: 'bull', target: 'manager', animated: isLive && isCurrentlyActive('bull') },
@@ -357,11 +369,12 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
       { id: 'pm-end', source: 'pm', target: 'end' },
     ].map((edge) => ({
       ...edge,
+      type: 'smoothstep',
       style: { stroke: '#475569', strokeWidth: 1.6 },
     }));
 
     return { nodes: rawNodes, edges: rawEdges };
-  }, [activeStatus, selectedAgentId]);
+  }, [activeStatus, runData, selectedAgentId, selectedAnalysts]);
 
   const handleNodeClick = (_, node) => {
     if (!onNodeClick) return;
@@ -381,7 +394,7 @@ const FlowGraph = ({ runData, activeStatus, onNodeClick, selectedAgentId }) => {
 
   return (
     <div style={{ width: '100%', height: '640px', background: '#0f172a', position: 'relative', borderRadius: '14px', overflow: 'hidden' }}>
-      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodeClick={handleNodeClick} fitView fitViewOptions={{ padding: 0.12 }}>
+      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodeClick={handleNodeClick} fitView fitViewOptions={{ padding: 0.16 }}>
         <Background color="#334155" gap={20} />
         <Controls />
       </ReactFlow>

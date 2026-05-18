@@ -27,7 +27,7 @@ def create_research_manager(llm):
 
         investment_debate_state = state["investment_debate_state"]
 
-        prompt = f"""As the Research Manager and debate facilitator, your role is to critically evaluate this round of debate and deliver a clear, actionable investment plan for the trader.
+        prompt = f"""As the Research Manager and debate facilitator, your role is to critically evaluate this round of debate and deliver a clear, actionable investment plan for the trader. Keep the output concise and high-signal: avoid long recaps, focus on the strongest evidence, and make the recommendation easy for the trader to act on.
 
 {instrument_context}
 

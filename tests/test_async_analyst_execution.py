@@ -160,4 +160,66 @@ def test_market_analyst_prompt_requests_batched_indicator_call():
 
     analyst.invoke(state)
 
-    assert "call get_indicators **once** with a comma-separated list" in chain.prompt_partials["system_message"]
+    system_message = chain.prompt_partials["system_message"]
+    assert "call get_indicators **once** with a comma-separated list" in system_message
+    assert "Do not make multiple indicator-tool calls for the same report" in system_message
+
+
+def _load_news_module(chain):
+    fake_messages = types.ModuleType("langchain_core.messages")
+    fake_messages.HumanMessage = _HumanMessage
+    fake_messages.RemoveMessage = _RemoveMessage
+    sys.modules["langchain_core.messages"] = fake_messages
+
+    fake_prompts = types.ModuleType("langchain_core.prompts")
+    _FakeChatPromptTemplate.chain = chain
+    fake_prompts.ChatPromptTemplate = _FakeChatPromptTemplate
+    fake_prompts.MessagesPlaceholder = _MessagesPlaceholder
+    sys.modules["langchain_core.prompts"] = fake_prompts
+
+    fake_runnables = types.ModuleType("langchain_core.runnables")
+    fake_runnables.RunnableLambda = _FakeRunnableLambda
+    sys.modules["langchain_core.runnables"] = fake_runnables
+
+    fake_agent_utils = types.ModuleType("tradingagents.agents.utils.agent_utils")
+    fake_agent_utils.build_instrument_context = lambda ticker: f"context for {ticker}"
+    fake_agent_utils.get_language_instruction = lambda: ""
+    fake_agent_utils.get_news = _FakeTool("get_news")
+    fake_agent_utils.get_global_news = _FakeTool("get_global_news")
+    sys.modules["tradingagents.agents.utils.agent_utils"] = fake_agent_utils
+
+    fake_config = types.ModuleType("tradingagents.dataflows.config")
+    fake_config.get_config = lambda: {}
+    sys.modules["tradingagents.dataflows.config"] = fake_config
+
+    module_path = (
+        Path(__file__).resolve().parents[1]
+        / "tradingagents"
+        / "agents"
+        / "analysts"
+        / "news_analyst.py"
+    )
+    spec = importlib.util.spec_from_file_location("news_analyst_test_module", module_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_news_analyst_prompt_prioritizes_macro_and_incremental_company_news():
+    chain = _FakeChain()
+    module = _load_news_module(chain)
+    analyst = module.create_news_analyst(_FakeLLM())
+
+    state = {
+        "trade_date": "2026-05-15",
+        "company_of_interest": "SHOP",
+        "news_messages": [_HumanMessage("SHOP")],
+    }
+
+    analyst.invoke(state)
+
+    system_message = chain.prompt_partials["system_message"]
+    assert "Start with get_global_news" in system_message
+    assert "only for material company-specific or targeted catalysts" in system_message
+    assert "Avoid repeating retail-sentiment framing" in system_message

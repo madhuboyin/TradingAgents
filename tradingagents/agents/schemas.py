@@ -79,13 +79,14 @@ class ResearchPlan(BaseModel):
         description=(
             "Conversational summary of the key points from both sides of the "
             "debate, ending with which arguments led to the recommendation. "
-            "Speak naturally, as if to a teammate."
+            "Speak naturally, as if to a teammate. Two to four sentences."
         ),
     )
     strategic_actions: str = Field(
         description=(
             "Concrete steps for the trader to implement the recommendation, "
-            "including position sizing guidance consistent with the rating."
+            "including position sizing guidance consistent with the rating. "
+            "Keep this concise and practical, ideally one to three short steps."
         ),
     )
 
@@ -193,7 +194,8 @@ class PortfolioDecision(BaseModel):
         description=(
             "Detailed reasoning anchored in specific evidence from the analysts' "
             "debate. If prior lessons are referenced in the prompt context, "
-            "incorporate them; otherwise rely solely on the current analysis."
+            "incorporate them; otherwise rely solely on the current analysis. "
+            "Keep it compact and high-signal, ideally one short paragraph."
         ),
     )
     price_target: Optional[float] = Field(

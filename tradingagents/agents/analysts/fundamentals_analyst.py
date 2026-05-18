@@ -24,7 +24,7 @@ from tradingagents.agents.utils.fundamental_data_tools import (
     _cached_fundamentals,
     _cached_income_statement,
 )
-from tradingagents.agents.utils.prompt_context import get_horizon_prompt, normalize_investment_horizon
+from tradingagents.agents.utils.prompt_context import get_horizon_prompt
 
 
 def create_fundamentals_analyst(llm):
@@ -38,7 +38,7 @@ def create_fundamentals_analyst(llm):
         ticker = state["company_of_interest"]
         curr_date = state["trade_date"]
         investment_horizon = state.get("investment_horizon", "short_term")
-        freq = "annual" if normalize_investment_horizon(investment_horizon) == "long_term" else "quarterly"
+        freq = "quarterly"
 
         async def _run(fn, *args):
             try:

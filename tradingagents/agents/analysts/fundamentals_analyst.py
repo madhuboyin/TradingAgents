@@ -24,7 +24,7 @@ from tradingagents.agents.utils.fundamental_data_tools import (
     _cached_fundamentals,
     _cached_income_statement,
 )
-from tradingagents.agents.utils.prompt_context import get_horizon_prompt
+from tradingagents.agents.utils.prompt_context import get_horizon_prompt, normalize_investment_horizon
 
 
 def create_fundamentals_analyst(llm):
@@ -37,6 +37,8 @@ def create_fundamentals_analyst(llm):
     async def _collect_inputs(state):
         ticker = state["company_of_interest"]
         curr_date = state["trade_date"]
+        investment_horizon = state.get("investment_horizon", "short_term")
+        freq = "annual" if normalize_investment_horizon(investment_horizon) == "long_term" else "quarterly"
 
         async def _run(fn, *args):
             try:
@@ -46,15 +48,16 @@ def create_fundamentals_analyst(llm):
 
         fundamentals, balance_sheet, cashflow, income_statement = await asyncio.gather(
             _run(_cached_fundamentals, ticker, curr_date),
-            _run(_cached_balance_sheet, ticker, "quarterly", curr_date),
-            _run(_cached_cashflow, ticker, "quarterly", curr_date),
-            _run(_cached_income_statement, ticker, "quarterly", curr_date),
+            _run(_cached_balance_sheet, ticker, freq, curr_date),
+            _run(_cached_cashflow, ticker, freq, curr_date),
+            _run(_cached_income_statement, ticker, freq, curr_date),
         )
 
         return {
             "ticker": ticker,
             "curr_date": curr_date,
-            "investment_horizon": state.get("investment_horizon", "short_term"),
+            "investment_horizon": investment_horizon,
+            "freq": freq,
             "instrument_context": build_instrument_context(ticker),
             "fundamentals": fundamentals,
             "balance_sheet": balance_sheet,
@@ -67,6 +70,7 @@ def create_fundamentals_analyst(llm):
 
     def _build_chain(inputs):
         horizon_prompt = get_horizon_prompt(inputs["investment_horizon"], role="fundamentals")
+        freq_label = inputs["freq"].capitalize()
 
         system_message = f"""You are a researcher tasked with analyzing fundamental information about a company. All financial data has been pre-fetched and is provided in the sections below. Write a comprehensive report covering the company's financial health, historical performance, and key fundamental drivers to inform traders. Include as much detail as possible and provide specific, actionable insights with supporting evidence.
 
@@ -79,17 +83,17 @@ Make sure to append a Markdown table at the end of the report to organize key po
 {inputs["fundamentals"]}
 <end_of_fundamentals>
 
-## Balance Sheet (Quarterly)
+## Balance Sheet ({freq_label})
 <start_of_balance_sheet>
 {inputs["balance_sheet"]}
 <end_of_balance_sheet>
 
-## Cash Flow Statement (Quarterly)
+## Cash Flow Statement ({freq_label})
 <start_of_cashflow>
 {inputs["cashflow"]}
 <end_of_cashflow>
 
-## Income Statement (Quarterly)
+## Income Statement ({freq_label})
 <start_of_income_statement>
 {inputs["income_statement"]}
 <end_of_income_statement>

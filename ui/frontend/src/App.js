@@ -902,7 +902,7 @@ const App = () => {
         </div>
 
         {(!isSidebarCollapsed || isNarrow) && (
-          <>
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
             <div style={{ padding: '16px 18px', borderBottom: `1px solid ${SURFACE.border}` }}>
               <div style={{ fontSize: '12px', color: SURFACE.textSubtle, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
                 Performance
@@ -1038,7 +1038,7 @@ const App = () => {
               </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '14px', minHeight: 0 }}>
+            <div style={{ padding: '14px' }}>
               <div style={{ fontSize: '12px', color: SURFACE.textSubtle, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px', paddingLeft: '6px' }}>
                 Recent runs
               </div>
@@ -1078,7 +1078,7 @@ const App = () => {
                 );
               })}
             </div>
-          </>
+          </div>
         )}
 
         {isSidebarCollapsed && !isNarrow && (
@@ -1268,12 +1268,21 @@ const App = () => {
                     <div
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: isCompact ? '1fr' : 'minmax(260px, 0.8fr) minmax(0, 1.2fr)',
+                        gridTemplateColumns: isCompact ? '1fr' : 'minmax(280px, 360px) minmax(0, 1fr)',
                         alignItems: 'start',
                         gap: '18px',
                       }}
                     >
-                      <div style={{ background: SURFACE.panelAlt, border: `1px solid ${SURFACE.borderStrong}`, borderLeft: `4px solid ${ratingColor}`, borderRadius: '16px', padding: '18px' }}>
+                      <div
+                        style={{
+                          background: SURFACE.panelAlt,
+                          border: `1px solid ${SURFACE.borderStrong}`,
+                          borderLeft: `4px solid ${ratingColor}`,
+                          borderRadius: '16px',
+                          padding: '18px',
+                          alignSelf: 'start',
+                        }}
+                      >
                         <div style={{ fontSize: '11px', color: SURFACE.textSubtle, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '10px' }}>
                           Key takeaway
                         </div>

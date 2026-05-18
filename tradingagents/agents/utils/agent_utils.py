@@ -1,3 +1,5 @@
+import functools
+
 from langchain_core.messages import HumanMessage, RemoveMessage
 
 # Import tools from separate utility files
@@ -36,6 +38,7 @@ def get_language_instruction() -> str:
     return f" Write your entire response in {lang}."
 
 
+@functools.lru_cache(maxsize=None)
 def build_instrument_context(ticker: str) -> str:
     """Describe the exact instrument so agents preserve exchange-qualified tickers."""
     return (

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 from typing import Iterable
 
 
@@ -77,6 +78,7 @@ def get_investment_horizon_label(horizon: str | None) -> str:
     return labels[normalized]
 
 
+@functools.lru_cache(maxsize=None)
 def get_horizon_prompt(horizon: str | None, *, role: str) -> str:
     """Return concise prompt guidance tailored to the investment horizon."""
     normalized = normalize_investment_horizon(horizon)

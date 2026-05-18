@@ -105,6 +105,11 @@ def get_horizon_prompt(horizon: str | None, *, role: str) -> str:
             "medium_term": "Focus on earnings trajectory, margin durability, capital intensity, and valuation over the next 1-2 years.",
             "long_term": "Focus on balance-sheet resilience, reinvestment capacity, capital allocation, and durability of earnings power over 3-5 years.",
         },
+        "industry": {
+            "short_term": "Keep the peer work concise and focus on whether relative valuation or competitive positioning changes the near-term thesis.",
+            "medium_term": "Emphasize relative growth, margin durability, and valuation across the peer set over the next 1-2 years.",
+            "long_term": "Emphasize industry structure, quality leadership, balance-sheet resilience, and multi-year relative compounding potential.",
+        },
         "research": {
             "short_term": "Give extra weight to near-term catalysts, technicals, sentiment, and the current macro regime, while still balancing business quality, valuation, and financial resilience.",
             "medium_term": "Balance current setup with industry dynamics, earnings durability, and valuation over the next 1-2 years.",

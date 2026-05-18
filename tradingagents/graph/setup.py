@@ -42,6 +42,7 @@ class GraphSetup:
                 - "social": Social media analyst
                 - "news": News analyst
                 - "fundamentals": Fundamentals analyst
+                - "industry": Industry / peer comparison analyst
             standalone (bool): If True, stop after the analyst phase.
         """
         if len(selected_analysts) == 0:
@@ -74,6 +75,10 @@ class GraphSetup:
             delete_nodes["fundamentals"] = create_msg_delete("fundamentals_messages")
             tool_nodes["fundamentals"] = self.tool_nodes["fundamentals"]
 
+        if "industry" in selected_analysts:
+            analyst_nodes["industry"] = create_industry_analyst(self.quick_thinking_llm)
+            delete_nodes["industry"] = create_msg_delete("industry_messages")
+
         # Create researcher and manager nodes
         bull_researcher_node = create_bull_researcher(self.quick_thinking_llm)
         bear_researcher_node = create_bear_researcher(self.quick_thinking_llm)
@@ -95,7 +100,8 @@ class GraphSetup:
             workflow.add_node(
                 f"Msg Clear {analyst_type.capitalize()}", delete_nodes[analyst_type]
             )
-            workflow.add_node(f"tools_{analyst_type}", tool_nodes[analyst_type])
+            if analyst_type in tool_nodes:
+                workflow.add_node(f"tools_{analyst_type}", tool_nodes[analyst_type])
 
         # Add other nodes
         workflow.add_node("Bull Researcher", bull_researcher_node)
@@ -123,6 +129,7 @@ class GraphSetup:
                     ("Sentiment Analysis", state.get("sentiment_report", "")),
                     ("News Analysis", state.get("news_report", "")),
                     ("Fundamentals Analysis", state.get("fundamentals_report", "")),
+                    ("Industry / Peer Comparison", state.get("industry_report", "")),
                 ],
                 max_chars_per_section=self.analyst_brief_max_chars,
             )
@@ -155,12 +162,19 @@ class GraphSetup:
             workflow.add_conditional_edges(
                 current_analyst,
                 getattr(self.conditional_logic, f"should_continue_{analyst_type}"),
-                {
-                    f"tools_{analyst_type}": f"tools_{analyst_type}",
-                    current_clear: current_clear,
-                },
+                (
+                    {
+                        f"tools_{analyst_type}": f"tools_{analyst_type}",
+                        current_clear: current_clear,
+                    }
+                    if analyst_type in tool_nodes
+                    else {
+                        current_clear: current_clear,
+                    }
+                ),
             )
-            workflow.add_edge(current_tools, current_analyst)
+            if analyst_type in tool_nodes:
+                workflow.add_edge(current_tools, current_analyst)
 
         # Run the synchronizer once after every analyst branch has finalized.
         workflow.add_edge(analyst_clear_nodes, "Analyst Synchronizer")

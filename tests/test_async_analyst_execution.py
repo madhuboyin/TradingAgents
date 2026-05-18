@@ -52,7 +52,9 @@ class _FakePrompt:
         return self
 
     def __or__(self, other):
-        self.chain.prompt_partials = dict(self.partials)
+        merged = dict(self.chain.prompt_partials)
+        merged.update(self.partials)
+        self.chain.prompt_partials = merged
         return self.chain
 
 
@@ -61,6 +63,12 @@ class _FakeChatPromptTemplate:
 
     @classmethod
     def from_messages(cls, messages):
+        for entry in messages:
+            if isinstance(entry, tuple) and len(entry) == 2:
+                message_type, content = entry
+                if message_type == "system":
+                    cls.chain.prompt_partials["system_message"] = content
+                    break
         return _FakePrompt(cls.chain)
 
 
@@ -88,7 +96,29 @@ class _FakeRunnableLambda:
         return self.func(state)
 
 
+def _install_namespace_packages():
+    repo_root = Path(__file__).resolve().parents[1]
+
+    tradingagents_pkg = types.ModuleType("tradingagents")
+    tradingagents_pkg.__path__ = [str(repo_root / "tradingagents")]
+    sys.modules["tradingagents"] = tradingagents_pkg
+
+    agents_pkg = types.ModuleType("tradingagents.agents")
+    agents_pkg.__path__ = [str(repo_root / "tradingagents" / "agents")]
+    sys.modules["tradingagents.agents"] = agents_pkg
+
+    agents_utils_pkg = types.ModuleType("tradingagents.agents.utils")
+    agents_utils_pkg.__path__ = [str(repo_root / "tradingagents" / "agents" / "utils")]
+    sys.modules["tradingagents.agents.utils"] = agents_utils_pkg
+
+    dataflows_pkg = types.ModuleType("tradingagents.dataflows")
+    dataflows_pkg.__path__ = [str(repo_root / "tradingagents" / "dataflows")]
+    sys.modules["tradingagents.dataflows"] = dataflows_pkg
+
+
 def _load_market_module(chain):
+    _install_namespace_packages()
+
     fake_messages = types.ModuleType("langchain_core.messages")
     fake_messages.HumanMessage = _HumanMessage
     fake_messages.RemoveMessage = _RemoveMessage
@@ -106,6 +136,7 @@ def _load_market_module(chain):
 
     fake_agent_utils = types.ModuleType("tradingagents.agents.utils.agent_utils")
     fake_agent_utils.build_instrument_context = lambda ticker: f"context for {ticker}"
+    fake_agent_utils.create_msg_delete = lambda *args, **kwargs: None
     fake_agent_utils.get_language_instruction = lambda: ""
     fake_agent_utils.get_stock_data = _FakeTool("get_stock_data")
     fake_agent_utils.get_indicators = _FakeTool("get_indicators")
@@ -170,6 +201,8 @@ def test_market_analyst_prompt_requests_batched_indicator_call():
 
 
 def _load_news_module(chain):
+    _install_namespace_packages()
+
     fake_messages = types.ModuleType("langchain_core.messages")
     fake_messages.HumanMessage = _HumanMessage
     fake_messages.RemoveMessage = _RemoveMessage
@@ -187,6 +220,7 @@ def _load_news_module(chain):
 
     fake_agent_utils = types.ModuleType("tradingagents.agents.utils.agent_utils")
     fake_agent_utils.build_instrument_context = lambda ticker: f"context for {ticker}"
+    fake_agent_utils.create_msg_delete = lambda *args, **kwargs: None
     fake_agent_utils.get_language_instruction = lambda: ""
     fake_agent_utils.get_news = _FakeTool("get_news")
     fake_agent_utils.get_global_news = _FakeTool("get_global_news")
@@ -231,3 +265,82 @@ def test_news_analyst_prompt_prioritizes_macro_and_incremental_company_news():
     assert "call get_news at most once" in system_message
     assert "Avoid repeating retail-sentiment framing" in system_message
     assert "Investment horizon: Medium term (1-2 years)." in system_message
+
+
+def _load_industry_module(chain):
+    _install_namespace_packages()
+
+    fake_messages = types.ModuleType("langchain_core.messages")
+    fake_messages.HumanMessage = _HumanMessage
+    fake_messages.RemoveMessage = _RemoveMessage
+    sys.modules["langchain_core.messages"] = fake_messages
+
+    fake_prompts = types.ModuleType("langchain_core.prompts")
+    _FakeChatPromptTemplate.chain = chain
+    fake_prompts.ChatPromptTemplate = _FakeChatPromptTemplate
+    fake_prompts.MessagesPlaceholder = _MessagesPlaceholder
+    sys.modules["langchain_core.prompts"] = fake_prompts
+
+    fake_runnables = types.ModuleType("langchain_core.runnables")
+    fake_runnables.RunnableLambda = _FakeRunnableLambda
+    sys.modules["langchain_core.runnables"] = fake_runnables
+
+    fake_agent_utils = types.ModuleType("tradingagents.agents.utils.agent_utils")
+    fake_agent_utils.build_instrument_context = lambda ticker: f"context for {ticker}"
+    fake_agent_utils.create_msg_delete = lambda *args, **kwargs: None
+    fake_agent_utils.get_language_instruction = lambda: ""
+    sys.modules["tradingagents.agents.utils.agent_utils"] = fake_agent_utils
+
+    fake_industry_tools = types.ModuleType("tradingagents.agents.utils.industry_data_tools")
+    fake_industry_tools.build_industry_inputs = lambda ticker, curr_date, max_peers, metric_limit: {
+        "target_fundamentals": "Revenue (TTM): 100\nOperating Margin: 0.2",
+        "target_snapshot": "### SHOP\n- Revenue (TTM): 100\n- Operating Margin: 0.2",
+        "peer_tickers": ["AMZN", "WMT"],
+        "peer_snapshots": "### AMZN\n- Revenue (TTM): 200\n\n### WMT\n- Revenue (TTM): 300",
+        "industry_context": "Sector: Consumer Defensive\nIndustry: Internet Retail",
+    }
+    sys.modules["tradingagents.agents.utils.industry_data_tools"] = fake_industry_tools
+
+    fake_config = types.ModuleType("tradingagents.dataflows.config")
+    fake_config.get_config = lambda: {
+        "industry_analyst_max_peers": 5,
+        "industry_analyst_peer_metric_limit": 8,
+    }
+    sys.modules["tradingagents.dataflows.config"] = fake_config
+
+    module_path = (
+        Path(__file__).resolve().parents[1]
+        / "tradingagents"
+        / "agents"
+        / "analysts"
+        / "industry_analyst.py"
+    )
+    spec = importlib.util.spec_from_file_location("industry_analyst_test_module", module_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_industry_analyst_uses_ainvoke_and_includes_peer_prompting():
+    chain = _FakeChain()
+    module = _load_industry_module(chain)
+    analyst = module.create_industry_analyst(_FakeLLM())
+
+    state = {
+        "trade_date": "2026-05-15",
+        "investment_horizon": "long_term",
+        "company_of_interest": "SHOP",
+        "industry_messages": [_HumanMessage("SHOP")],
+    }
+
+    result = asyncio.run(analyst.ainvoke(state))
+
+    assert chain.ainvoke_calls == 1
+    assert chain.invoke_calls == 0
+    assert result["industry_report"] == "async report"
+
+    system_message = chain.prompt_partials["system_message"]
+    assert "industry and peer comparison analyst" in system_message
+    assert "Is the stock attractive relative to its peers?" in system_message
+    assert "Investment horizon: Long term (3-5 years)." in system_message

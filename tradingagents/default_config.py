@@ -21,6 +21,11 @@ _ENV_OVERRIDES = {
     "TRADINGAGENTS_BENCHMARK_TICKER":     "benchmark_ticker",
     "TRADINGAGENTS_PORTFOLIO_MAX_CONCURRENCY": "portfolio_max_concurrency",
     "TRADINGAGENTS_GLOBAL_NEWS_QUERY_CONCURRENCY": "global_news_query_concurrency",
+    "TRADINGAGENTS_INDUSTRY_ANALYST_ENABLED": "industry_analyst_enabled",
+    "TRADINGAGENTS_INDUSTRY_ANALYST_DEFAULT_FOR_SHORT_TERM": "industry_analyst_default_for_short_term",
+    "TRADINGAGENTS_INDUSTRY_ANALYST_MAX_PEERS": "industry_analyst_max_peers",
+    "TRADINGAGENTS_INDUSTRY_ANALYST_PEER_METRIC_LIMIT": "industry_analyst_peer_metric_limit",
+    "TRADINGAGENTS_INDUSTRY_ANALYST_MAX_CHARS": "industry_analyst_max_chars",
 }
 
 
@@ -104,6 +109,12 @@ DEFAULT_CONFIG = _apply_env_overrides({
     "global_news_article_limit": 6,       # max articles for global/macro news
     "global_news_lookback_days": 7,       # macro news lookback window
     "global_news_query_concurrency": 3,   # concurrent macro-news searches
+    # Industry / peer comparison analyst
+    "industry_analyst_enabled": True,
+    "industry_analyst_default_for_short_term": False,
+    "industry_analyst_max_peers": 5,
+    "industry_analyst_peer_metric_limit": 8,
+    "industry_analyst_max_chars": 1800,
     # Search queries used by get_global_news for macro headlines. Extend or
     # replace to broaden geographic / sector coverage.
     "global_news_queries": [

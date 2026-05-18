@@ -760,6 +760,7 @@ class TradingAgentsGraph:
             "sentiment_report": final_state.get("sentiment_report", ""),
             "news_report": final_state.get("news_report", ""),
             "fundamentals_report": final_state.get("fundamentals_report", ""),
+            "industry_report": final_state.get("industry_report", ""),
             "investment_debate_state": {
                 "bull_history": invest_debate.get("bull_history", ""),
                 "bear_history": invest_debate.get("bear_history", ""),

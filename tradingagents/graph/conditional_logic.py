@@ -54,6 +54,14 @@ class ConditionalLogic:
             return "tools_fundamentals"
         return "Msg Clear Fundamentals"
 
+    def should_continue_industry(self, state: AgentState):
+        """Determine if industry / peer comparison analysis should continue."""
+        messages = state["industry_messages"]
+        last_message = messages[-1]
+        if self._has_tool_calls(last_message):
+            return "tools_industry"
+        return "Msg Clear Industry"
+
     def should_continue_debate(self, state: AgentState) -> str:
         """Determine if debate should continue."""
 

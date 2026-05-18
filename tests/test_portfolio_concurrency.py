@@ -56,6 +56,7 @@ def test_portfolio_uses_bounded_concurrency(cli_main_module, monkeypatch):
         checkpoint,
         standalone,
         run_id,
+        investment_horizon,
     ):
         nonlocal active, max_seen
         with lock:

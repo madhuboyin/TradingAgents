@@ -59,6 +59,7 @@ class AgentState(MessagesState):
         str, "Report from the News Researcher of current world affairs"
     ]
     fundamentals_report: Annotated[str, "Report from the Fundamentals Researcher"]
+    industry_report: Annotated[str, "Report from the Industry / Peer Comparison Analyst"]
     analyst_brief: Annotated[str, "Compact downstream brief synthesized from analyst reports"]
 
     # analyst-specific message histories for parallelization safety
@@ -66,6 +67,7 @@ class AgentState(MessagesState):
     sentiment_messages: Annotated[list, add_messages]
     news_messages: Annotated[list, add_messages]
     fundamentals_messages: Annotated[list, add_messages]
+    industry_messages: Annotated[list, add_messages]
 
     # Counter for parallel analyst synchronization
     analyst_count: Annotated[int, operator.add]

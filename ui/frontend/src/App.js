@@ -1241,6 +1241,7 @@ const App = () => {
                       style={{
                         display: 'grid',
                         gridTemplateColumns: isCompact ? '1fr' : 'minmax(260px, 0.8fr) minmax(0, 1.2fr)',
+                        alignItems: 'start',
                         gap: '18px',
                       }}
                     >

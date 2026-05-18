@@ -83,6 +83,19 @@ const getRatingColor = (headline) => {
   return SURFACE.textMuted;
 };
 
+const renderInlineMarkdown = (text, accentColor = SURFACE.text) => (
+  text.split(/(\*\*.*?\*\*)/g).map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={index} style={{ color: accentColor }}>
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return <React.Fragment key={index}>{part}</React.Fragment>;
+  })
+);
+
 const MarkdownContent = ({ content, emptyMessage = 'No data available' }) => {
   if (!content) {
     return (
@@ -98,113 +111,259 @@ const MarkdownContent = ({ content, emptyMessage = 'No data available' }) => {
     );
   }
 
-  const prepared = content.replace(/([^\n])(\*\*.*?\*\*):/g, '$1\n\n$2:');
-  const chunks = prepared.split('\n\n').filter((chunk) => chunk.trim());
+  const lines = content.split('\n');
+  const blocks = [];
+  let paragraphBuffer = [];
+  let listBuffer = [];
+  let tableBuffer = [];
+  let codeBuffer = [];
+  let inCodeBlock = false;
+
+  const flushParagraph = () => {
+    if (!paragraphBuffer.length) return;
+    blocks.push({ type: 'paragraph', lines: [...paragraphBuffer] });
+    paragraphBuffer = [];
+  };
+
+  const flushList = () => {
+    if (!listBuffer.length) return;
+    blocks.push({ type: 'list', items: [...listBuffer] });
+    listBuffer = [];
+  };
+
+  const flushTable = () => {
+    if (!tableBuffer.length) return;
+    blocks.push({ type: 'table', lines: [...tableBuffer] });
+    tableBuffer = [];
+  };
+
+  const flushCode = () => {
+    if (!codeBuffer.length) return;
+    blocks.push({ type: 'code', lines: [...codeBuffer] });
+    codeBuffer = [];
+  };
+
+  lines.forEach((rawLine) => {
+    const line = rawLine.replace(/\r/g, '');
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('```')) {
+      flushParagraph();
+      flushList();
+      flushTable();
+      if (inCodeBlock) {
+        flushCode();
+        inCodeBlock = false;
+      } else {
+        inCodeBlock = true;
+      }
+      return;
+    }
+
+    if (inCodeBlock) {
+      codeBuffer.push(line);
+      return;
+    }
+
+    if (!trimmed) {
+      flushParagraph();
+      flushList();
+      flushTable();
+      return;
+    }
+
+    if (/^\|.+\|$/.test(trimmed)) {
+      flushParagraph();
+      flushList();
+      tableBuffer.push(trimmed);
+      return;
+    }
+
+    if (/^[-*•]\s+/.test(trimmed)) {
+      flushParagraph();
+      flushTable();
+      listBuffer.push(trimmed.replace(/^[-*•]\s+/, ''));
+      return;
+    }
+
+    if (/^#{1,4}\s+/.test(trimmed) || /^\*\*.*?\*\*:\s*/.test(trimmed)) {
+      flushParagraph();
+      flushList();
+      flushTable();
+      blocks.push({ type: 'heading', text: trimmed });
+      return;
+    }
+
+    flushList();
+    flushTable();
+    paragraphBuffer.push(line);
+  });
+
+  flushParagraph();
+  flushList();
+  flushTable();
+  flushCode();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {chunks.map((chunk, i) => {
-        const headerMatch = chunk.match(/^\*\*(.*?)\*\*:\s*(.*)/s);
+      {blocks.map((block, i) => {
+        if (block.type === 'heading') {
+          const hashMatch = block.text.match(/^(#{1,4})\s+(.*)$/);
+          const boldLabelMatch = block.text.match(/^\*\*(.*?)\*\*:\s*(.*)$/);
 
-        if (headerMatch) {
-          const [, header, body] = headerMatch;
-          const isHighlight = ['Rating', 'Recommendation', 'Action'].some((token) => header.includes(token));
-          const sentences = body.split(/(?<=[.!?])\s+/).filter((sentence) => sentence.trim().length > 5);
-
-          return (
-            <div
-              key={i}
-              style={{
-                background: isHighlight ? SURFACE.panelMuted : 'transparent',
-                borderRadius: '12px',
-                padding: isHighlight ? '16px' : '0 2px',
-                border: isHighlight ? `1px solid ${SURFACE.borderStrong}` : 'none',
-                borderLeft: isHighlight
-                  ? `4px solid ${header.includes('Action') ? SURFACE.green : SURFACE.blue}`
-                  : 'none',
-              }}
-            >
+          if (hashMatch) {
+            const level = hashMatch[1].length;
+            const text = hashMatch[2];
+            const fontSize = { 1: '24px', 2: '20px', 3: '16px', 4: '14px' }[level] || '14px';
+            return (
               <div
+                key={i}
                 style={{
-                  fontSize: '11px',
+                  fontSize,
                   fontWeight: 800,
-                  textTransform: 'uppercase',
-                  color: isHighlight ? SURFACE.textMuted : SURFACE.blueSoft,
-                  letterSpacing: '0.1em',
-                  marginBottom: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
+                  color: level <= 2 ? SURFACE.text : SURFACE.blueSoft,
+                  lineHeight: 1.35,
+                  marginTop: level <= 2 ? '8px' : '0',
                 }}
               >
-                {header.includes('Rating') && <Target size={14} />}
-                {header.includes('Action') && <AlertTriangle size={14} />}
-                {header.includes('Rationale') && <Info size={14} />}
-                {header}
+                {text}
               </div>
+            );
+          }
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {sentences.map((sentence, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: 'flex',
-                      gap: '10px',
-                      fontSize: '13px',
-                      lineHeight: 1.6,
-                      color: SURFACE.text,
-                      fontWeight: header.includes('Rating') ? 700 : 400,
-                    }}
-                  >
-                    <span style={{ color: SURFACE.blue, fontSize: '16px', lineHeight: 1.2 }}>•</span>
-                    <span>
-                      {sentence.split(/(\*\*.*?\*\*)/g).map((part, j) => {
-                        if (part.startsWith('**') && part.endsWith('**')) {
-                          return (
-                            <strong key={j} style={{ color: SURFACE.blueSoft }}>
-                              {part.slice(2, -2)}
-                            </strong>
-                          );
-                        }
-                        return part;
-                      })}
-                    </span>
+          if (boldLabelMatch) {
+            const [, label, rest] = boldLabelMatch;
+            const isHighlight = ['Rating', 'Recommendation', 'Action'].some((token) => label.includes(token));
+            return (
+              <div
+                key={i}
+                style={{
+                  background: isHighlight ? SURFACE.panelMuted : 'transparent',
+                  borderRadius: '12px',
+                  padding: isHighlight ? '16px' : '0 2px',
+                  border: isHighlight ? `1px solid ${SURFACE.borderStrong}` : 'none',
+                  borderLeft: isHighlight
+                    ? `4px solid ${label.includes('Action') ? SURFACE.green : SURFACE.blue}`
+                    : 'none',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    color: isHighlight ? SURFACE.textMuted : SURFACE.blueSoft,
+                    letterSpacing: '0.1em',
+                    marginBottom: rest ? '8px' : 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  {label.includes('Rating') && <Target size={14} />}
+                  {label.includes('Action') && <AlertTriangle size={14} />}
+                  {label.includes('Rationale') && <Info size={14} />}
+                  {label}
+                </div>
+                {rest ? (
+                  <div style={{ fontSize: '14px', lineHeight: 1.7, color: SURFACE.text }}>
+                    {renderInlineMarkdown(rest, SURFACE.blueSoft)}
                   </div>
-                ))}
+                ) : null}
               </div>
+            );
+          }
+        }
+
+        if (block.type === 'list') {
+          return (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {block.items.map((item, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    display: 'flex',
+                    gap: '10px',
+                    fontSize: '14px',
+                    lineHeight: 1.7,
+                    color: SURFACE.text,
+                  }}
+                >
+                  <span style={{ color: SURFACE.blue, fontSize: '16px', lineHeight: 1.2 }}>•</span>
+                  <span>{renderInlineMarkdown(item, SURFACE.blueSoft)}</span>
+                </div>
+              ))}
             </div>
           );
         }
 
-        const paragraphSentences = chunk.split(/(?<=[.!?])\s+/).filter((sentence) => sentence.trim().length > 5);
-        return (
-          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 2px' }}>
-            {paragraphSentences.map((sentence, idx) => (
-              <div
-                key={idx}
+        if (block.type === 'table') {
+          return (
+            <div
+              key={i}
+              style={{
+                overflowX: 'auto',
+                border: `1px solid ${SURFACE.border}`,
+                borderRadius: '12px',
+                background: SURFACE.panelAlt,
+                padding: '14px',
+              }}
+            >
+              <pre
                 style={{
-                  display: 'flex',
-                  gap: '10px',
-                  fontSize: '13px',
-                  lineHeight: 1.7,
-                  color: SURFACE.textMuted,
+                  margin: 0,
+                  color: SURFACE.text,
+                  fontSize: '12px',
+                  lineHeight: 1.6,
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                  whiteSpace: 'pre',
                 }}
               >
-                <span style={{ color: SURFACE.textSubtle }}>•</span>
-                <span>
-                  {sentence.split(/(\*\*.*?\*\*)/g).map((part, j) => {
-                    if (part.startsWith('**') && part.endsWith('**')) {
-                      return (
-                        <strong key={j} style={{ color: SURFACE.text }}>
-                          {part.slice(2, -2)}
-                        </strong>
-                      );
-                    }
-                    return part;
-                  })}
-                </span>
-              </div>
-            ))}
+                {block.lines.join('\n')}
+              </pre>
+            </div>
+          );
+        }
+
+        if (block.type === 'code') {
+          return (
+            <div
+              key={i}
+              style={{
+                overflowX: 'auto',
+                border: `1px solid ${SURFACE.borderStrong}`,
+                borderRadius: '12px',
+                background: SURFACE.appBg,
+                padding: '14px',
+              }}
+            >
+              <pre
+                style={{
+                  margin: 0,
+                  color: SURFACE.textMuted,
+                  fontSize: '12px',
+                  lineHeight: 1.6,
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {block.lines.join('\n')}
+              </pre>
+            </div>
+          );
+        }
+
+        return (
+          <div
+            key={i}
+            style={{
+              fontSize: '14px',
+              lineHeight: 1.75,
+              color: SURFACE.textMuted,
+              whiteSpace: 'pre-wrap',
+            }}
+          >
+            {renderInlineMarkdown(block.lines.join('\n'), SURFACE.text)}
           </div>
         );
       })}

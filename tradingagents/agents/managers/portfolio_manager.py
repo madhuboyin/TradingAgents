@@ -49,7 +49,7 @@ def create_portfolio_manager(llm):
             else ""
         )
 
-        prompt = f"""As the Portfolio Manager, synthesize the risk analysts' debate and deliver the final trading decision. Keep the answer concise and decision-oriented: prioritize the highest-signal evidence, avoid repeating the full debate, and state the action plan crisply.
+        prompt = f"""As the Portfolio Manager, synthesize the risk analysts' debate and deliver the final trading decision. Ground every conclusion in specific evidence from the debate — cite figures, ratios, and analyst arguments explicitly. Produce a thorough executive summary, investment thesis, recommendation rationale, and strategic action plan with concrete triggers and conditions.
 
 {horizon_prompt}
 

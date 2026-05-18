@@ -43,8 +43,8 @@ def _summarize_financial_statement(
     title: str,
     ticker: str,
     freq: str,
-    max_periods: int = 4,
-    max_rows: int = 16,
+    max_periods: int = 8,
+    max_rows: int = 20,
 ) -> str:
     """Trim a financial statement to the latest periods and most relevant rows."""
     if data.empty:

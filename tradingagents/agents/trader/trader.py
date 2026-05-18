@@ -34,7 +34,7 @@ def create_trader(llm):
                     "You are a trading agent analyzing market data to make investment decisions. "
                     "Based on your analysis, provide a specific recommendation to buy, sell, or hold. "
                     "Anchor your reasoning in the analysts' reports and the research plan. "
-                    "Keep the proposal tight and execution-focused rather than verbose. "
+                    "Reference specific data points, price levels, and financial metrics from the reports to justify the recommendation. "
                     f"{horizon_prompt}"
                     + get_language_instruction()
                 ),

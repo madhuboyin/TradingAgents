@@ -96,6 +96,20 @@ const renderInlineMarkdown = (text, accentColor = SURFACE.text) => (
   })
 );
 
+const splitInlineOrderedList = (text) => {
+  const normalized = (text || '').trim();
+  if (!normalized) return [];
+
+  const matches = [...normalized.matchAll(/(?:^|\s)(\d+)\.\s+/g)];
+  if (matches.length < 2 || matches[0].index !== 0) return [];
+
+  return matches.map((match, index) => {
+    const start = match.index;
+    const end = index + 1 < matches.length ? matches[index + 1].index : normalized.length;
+    return normalized.slice(start, end).trim().replace(/^\d+\.\s+/, '');
+  }).filter(Boolean);
+};
+
 const MarkdownContent = ({ content, emptyMessage = 'No data available' }) => {
   if (!content) {
     return (
@@ -179,6 +193,13 @@ const MarkdownContent = ({ content, emptyMessage = 'No data available' }) => {
       return;
     }
 
+    if (/^\d+\.\s+/.test(trimmed)) {
+      flushParagraph();
+      flushTable();
+      listBuffer.push(trimmed.replace(/^\d+\.\s+/, ''));
+      return;
+    }
+
     if (/^[-*•]\s+/.test(trimmed)) {
       flushParagraph();
       flushTable();
@@ -196,6 +217,12 @@ const MarkdownContent = ({ content, emptyMessage = 'No data available' }) => {
 
     flushList();
     flushTable();
+    const inlineOrderedItems = splitInlineOrderedList(trimmed);
+    if (inlineOrderedItems.length) {
+      flushParagraph();
+      listBuffer.push(...inlineOrderedItems);
+      return;
+    }
     paragraphBuffer.push(line);
   });
 

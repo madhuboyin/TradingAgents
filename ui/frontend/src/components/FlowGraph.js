@@ -113,7 +113,7 @@ const nodeTypes = {
   agent: AgentNode,
 };
 
-const FlowGraph = ({ runData, activeStatus, selectedAnalysts = DEFAULT_ANALYST_ORDER, onNodeClick, selectedAgentId }) => {
+const FlowGraph = ({ runData, activeStatus, selectedAnalysts = DEFAULT_ANALYST_ORDER, onNodeClick, selectedAgentId, compact = false }) => {
   const { nodes, edges } = useMemo(() => {
     const isLive = !!activeStatus;
     const isCompleted = activeStatus?.status === 'completed';
@@ -403,7 +403,7 @@ const FlowGraph = ({ runData, activeStatus, selectedAnalysts = DEFAULT_ANALYST_O
   };
 
   return (
-    <div style={{ width: '100%', height: '640px', background: '#0f172a', position: 'relative', borderRadius: '14px', overflow: 'hidden' }}>
+    <div style={{ width: '100%', height: compact ? '520px' : '640px', background: '#0f172a', position: 'relative', borderRadius: '14px', overflow: 'hidden' }}>
       <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodeClick={handleNodeClick} fitView fitViewOptions={{ padding: 0.16 }}>
         <Background color="#334155" gap={20} />
         <Controls />

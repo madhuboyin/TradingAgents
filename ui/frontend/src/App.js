@@ -440,13 +440,13 @@ const ProgressBar = ({ progress, status }) => {
   );
 };
 
-const SectionCard = ({ title, subtitle, icon: Icon, children, accent = SURFACE.blue, collapsible = false, collapsed = false, onToggleCollapse }) => (
+const SectionCard = ({ title, subtitle, icon: Icon, children, accent = SURFACE.blue, collapsible = false, collapsed = false, onToggleCollapse, compact = false }) => (
   <section
     style={{
       background: SURFACE.panel,
       border: `1px solid ${SURFACE.border}`,
       borderRadius: '16px',
-      padding: '20px',
+      padding: compact ? '16px' : '20px',
     }}
   >
     <div
@@ -544,10 +544,11 @@ const AnalystToggle = ({ option, checked, onChange }) => (
   </label>
 );
 
-const StatusBanner = ({ items }) => (
+const StatusBanner = ({ items, isCompact = false }) => (
   <div
     style={{
-      display: 'flex',
+      display: 'grid',
+      gridTemplateColumns: isCompact ? 'repeat(2, minmax(0, 1fr))' : `repeat(${items.length}, minmax(0, 1fr))`,
       alignItems: 'stretch',
       marginTop: '16px',
       background: SURFACE.panel,
@@ -560,9 +561,9 @@ const StatusBanner = ({ items }) => (
       <div
         key={item.label}
         style={{
-          flex: 1,
           padding: '10px 14px',
-          borderRight: i < items.length - 1 ? `1px solid ${SURFACE.border}` : 'none',
+          borderRight: !isCompact && i < items.length - 1 ? `1px solid ${SURFACE.border}` : 'none',
+          borderBottom: isCompact && i < items.length - 2 ? `1px solid ${SURFACE.border}` : 'none',
           minWidth: 0,
         }}
       >
@@ -577,7 +578,7 @@ const StatusBanner = ({ items }) => (
   </div>
 );
 
-const AgentInspectorPanel = ({ agent, onClose }) => {
+const AgentInspectorPanel = ({ agent, onClose, isNarrow = false }) => {
   React.useEffect(() => {
     const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handleKey);
@@ -599,9 +600,9 @@ const AgentInspectorPanel = ({ agent, onClose }) => {
       <div
         style={{
           position: 'fixed', right: 0, top: 0,
-          height: '100vh', width: '360px',
+          height: '100vh', width: isNarrow ? '100vw' : '360px',
           background: SURFACE.panel,
-          borderLeft: `1px solid ${SURFACE.borderStrong}`,
+          borderLeft: isNarrow ? 'none' : `1px solid ${SURFACE.borderStrong}`,
           zIndex: 50,
           overflowY: 'auto',
           display: 'flex', flexDirection: 'column',
@@ -682,15 +683,23 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('decision');
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
   const [isWorkflowCollapsed, setIsWorkflowCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const isCompact = viewportWidth < 1180;
   const isNarrow = viewportWidth < 860;
+  const isPhone = viewportWidth < 640;
 
   useEffect(() => {
     const handleResize = () => setViewportWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (!isNarrow) {
+      setIsMobileSidebarOpen(false);
+    }
+  }, [isNarrow]);
 
   // Auto-expand workflow when a live analysis starts; collapse when browsing history.
   useEffect(() => {
@@ -1051,7 +1060,7 @@ const App = () => {
       >
         <div
           style={{
-            padding: '20px',
+            padding: isPhone ? '14px 16px' : '20px',
             borderBottom: `1px solid ${SURFACE.border}`,
             display: 'flex',
             alignItems: 'center',
@@ -1063,10 +1072,32 @@ const App = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Activity color={SURFACE.blue} />
               <div>
-                <h1 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>TradingAgents</h1>
+                <h1 style={{ fontSize: isPhone ? '16px' : '18px', fontWeight: 800, margin: 0 }}>TradingAgents</h1>
                 <div style={{ fontSize: '12px', color: SURFACE.textMuted }}>Decision support dashboard</div>
               </div>
             </div>
+          )}
+          {isNarrow && (
+            <button
+              onClick={() => setIsMobileSidebarOpen((current) => !current)}
+              style={{
+                background: 'transparent',
+                border: `1px solid ${SURFACE.borderStrong}`,
+                borderRadius: '999px',
+                color: SURFACE.text,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 12px',
+                fontSize: '12px',
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              {isMobileSidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+              {isMobileSidebarOpen ? 'Hide controls' : 'Controls & runs'}
+            </button>
           )}
           {!isNarrow && (
             <button
@@ -1087,13 +1118,13 @@ const App = () => {
           )}
         </div>
 
-        {(!isSidebarCollapsed || isNarrow) && (
+        {(!isSidebarCollapsed || isNarrow) && (!isNarrow || isMobileSidebarOpen) && (
           <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-            <div style={{ padding: '16px 18px', borderBottom: `1px solid ${SURFACE.border}` }}>
+            <div style={{ padding: isPhone ? '14px 16px' : '16px 18px', borderBottom: `1px solid ${SURFACE.border}` }}>
               <div style={{ fontSize: '12px', color: SURFACE.textSubtle, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
                 Performance
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr', gap: '10px' }}>
                 <div style={{ background: SURFACE.panel, border: `1px solid ${SURFACE.border}`, borderRadius: '12px', padding: '12px' }}>
                   <div style={{ fontSize: '11px', color: SURFACE.textMuted, marginBottom: '6px' }}>Total trades</div>
                   <div style={{ fontSize: '20px', fontWeight: 800 }}>{stats?.total_trades || 0}</div>
@@ -1107,7 +1138,7 @@ const App = () => {
               </div>
             </div>
 
-            <div style={{ padding: '18px', borderBottom: `1px solid ${SURFACE.border}`, background: 'rgba(15, 23, 42, 0.65)' }}>
+            <div style={{ padding: isPhone ? '16px' : '18px', borderBottom: `1px solid ${SURFACE.border}`, background: 'rgba(15, 23, 42, 0.65)' }}>
               <div style={{ fontSize: '12px', color: SURFACE.textSubtle, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
                 Portfolio
               </div>
@@ -1224,7 +1255,7 @@ const App = () => {
               </div>
             </div>
 
-            <div style={{ padding: '14px' }}>
+            <div style={{ padding: isPhone ? '14px 16px 16px' : '14px' }}>
               <div style={{ fontSize: '12px', color: SURFACE.textSubtle, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px', paddingLeft: '6px' }}>
                 Recent runs
               </div>
@@ -1298,8 +1329,8 @@ const App = () => {
         )}
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <header style={{ padding: '24px', borderBottom: `1px solid ${SURFACE.border}`, background: 'rgba(2, 6, 23, 0.72)' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+        <header style={{ padding: isPhone ? '16px' : isNarrow ? '18px' : '24px', borderBottom: `1px solid ${SURFACE.border}`, background: 'rgba(2, 6, 23, 0.72)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isCompact ? 'flex-start' : 'center', gap: '16px', flexDirection: isCompact ? 'column' : 'row' }}>
             <div style={{ maxWidth: isCompact ? '100%' : 'none', minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
@@ -1308,7 +1339,7 @@ const App = () => {
                   {formatStatusLabel(activeStatus?.status || 'completed')}
                 </span>
               </div>
-              <h2 style={{ margin: 0, fontSize: isNarrow ? '28px' : '32px', lineHeight: 1.1 }}>{heroTitle}</h2>
+              <h2 style={{ margin: 0, fontSize: isPhone ? '24px' : isNarrow ? '28px' : '32px', lineHeight: 1.1 }}>{heroTitle}</h2>
               <div
                 style={{
                   fontSize: '14px',
@@ -1351,7 +1382,7 @@ const App = () => {
             )}
           </div>
 
-          <StatusBanner items={[
+          <StatusBanner isCompact={isNarrow} items={[
             { label: 'Status', value: formatStatusLabel(activeStatus?.status || 'completed'), tone: statusTone },
             { label: 'Decision', value: decisionHeadline, tone: ratingColor },
             { label: 'Horizon', value: formatInvestmentHorizon(currentHorizon), tone: SURFACE.purple },
@@ -1388,7 +1419,7 @@ const App = () => {
           }
         `}</style>
 
-        <main style={{ flex: 1, overflowY: 'auto', padding: isNarrow ? '16px' : '24px' }}>
+        <main style={{ flex: 1, overflowY: 'auto', padding: isPhone ? '12px' : isNarrow ? '16px' : '24px' }}>
           {loading ? (
             <EmptyState title="Loading dashboard" body="Fetching recent runs, portfolio settings, and historical context." />
           ) : !selectedRun && !activeStatus ? (
@@ -1402,6 +1433,7 @@ const App = () => {
                 collapsible
                 collapsed={isWorkflowCollapsed}
                 onToggleCollapse={() => setIsWorkflowCollapsed((c) => !c)}
+                compact={isPhone}
               >
                 <FlowGraph
                   runData={runDetail}
@@ -1409,6 +1441,7 @@ const App = () => {
                   selectedAnalysts={graphAnalystSelection}
                   onNodeClick={setSelectedAgent}
                   selectedAgentId={selectedAgent?.id}
+                  compact={isNarrow}
                 />
               </SectionCard>
 
@@ -1416,6 +1449,7 @@ const App = () => {
                 <AgentInspectorPanel
                   agent={selectedAgent}
                   onClose={() => setSelectedAgent(null)}
+                  isNarrow={isNarrow}
                 />
               )}
 
@@ -1425,6 +1459,7 @@ const App = () => {
                 subtitle="The most important output first, with the supporting plan, analyst reports, and historical context one click away."
                 icon={Target}
                 accent={SURFACE.blue}
+                compact={isPhone}
               >
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '18px' }}>
                     {detailTabs.map((tab) => {

@@ -11,6 +11,7 @@ _CURATED_PEER_MAP: Dict[str, List[str]] = {
     "AVGO": ["NVDA", "AMD", "QCOM", "MRVL"],
     "CRM": ["NOW", "ORCL", "SAP", "ADBE"],
     "COST": ["WMT", "TGT", "KR", "BJ"],
+    "GOOG": ["META", "AMZN", "MSFT", "BIDU"],
     "GOOGL": ["META", "AMZN", "MSFT", "BIDU"],
     "INTC": ["AMD", "NVDA", "QCOM", "TXN"],
     "JPM": ["BAC", "C", "GS", "MS"],

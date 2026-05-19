@@ -72,12 +72,25 @@ Focus on:
 - valuation context versus peers
 - whether the opportunity looks like quality leadership, cyclical beta, or a value trap
 
-Avoid repeating generic company-overview prose unless it directly helps the peer comparison. Be explicit when peer coverage is incomplete. End with a compact Markdown table summarizing the target against peers.
+Hard constraints:
+- Only use peers explicitly listed in the curated peer set and peer snapshots below.
+- Do not infer, invent, simulate, or substitute peers when coverage is missing.
+- Do not fabricate financial values, comparison rows, placeholder datasets, or unsupported claims.
+- Do not output Python, pseudo-code, data-fetch simulations, or implementation notes.
+- If peer coverage is incomplete or unavailable, say that plainly and keep the peer-relative confidence low.
+
+Avoid repeating generic company-overview prose unless it directly helps the peer comparison. Be explicit when peer coverage is incomplete. End with a compact Markdown table summarizing the target against peers only when peer coverage is available.
 
 ## Industry Context
 <start_of_industry_context>
 {inputs["industry_context"]}
 <end_of_industry_context>
+
+## Peer Coverage
+<start_of_peer_coverage>
+Status: {inputs["peer_coverage_status"]}
+{inputs["peer_selection_note"]}
+<end_of_peer_coverage>
 
 ## Target Snapshot
 <start_of_target_snapshot>
@@ -93,6 +106,11 @@ Avoid repeating generic company-overview prose unless it directly helps the peer
 <start_of_peer_snapshots>
 {inputs["peer_snapshots"]}
 <end_of_peer_snapshots>
+
+## Comparison Table
+<start_of_comparison_table>
+{inputs["comparison_table"]}
+<end_of_comparison_table>
 
 For your reference, the current date is {inputs["curr_date"]}. {inputs["instrument_context"]}{get_language_instruction()}"""
 

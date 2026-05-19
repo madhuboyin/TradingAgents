@@ -295,8 +295,11 @@ def _load_industry_module(chain):
     fake_industry_tools.build_industry_inputs = lambda ticker, curr_date, max_peers, metric_limit: {
         "target_fundamentals": "Revenue (TTM): 100\nOperating Margin: 0.2",
         "target_snapshot": "### SHOP\n- Revenue (TTM): 100\n- Operating Margin: 0.2",
+        "peer_coverage_status": "available",
+        "peer_selection_note": "Curated peer set: AMZN, WMT",
         "peer_tickers": ["AMZN", "WMT"],
         "peer_snapshots": "### AMZN\n- Revenue (TTM): 200\n\n### WMT\n- Revenue (TTM): 300",
+        "comparison_table": "| Metric | SHOP | AMZN | WMT |\n| :--- | :--- | :--- | :--- |\n| Revenue (TTM) | 100 | 200 | 300 |",
         "industry_context": "Sector: Consumer Defensive\nIndustry: Internet Retail",
     }
     sys.modules["tradingagents.agents.utils.industry_data_tools"] = fake_industry_tools
@@ -343,6 +346,9 @@ def test_industry_analyst_uses_ainvoke_and_includes_peer_prompting():
     system_message = chain.prompt_partials["system_message"]
     assert "industry and peer comparison analyst" in system_message
     assert "Is the stock attractive relative to its peers?" in system_message
+    assert "Do not infer, invent, simulate, or substitute peers" in system_message
+    assert "Do not output Python, pseudo-code, data-fetch simulations" in system_message
+    assert "Status: available" in system_message
     assert "Investment horizon: Long term (3-5 years)." in system_message
 
 

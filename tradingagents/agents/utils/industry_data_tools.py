@@ -28,6 +28,18 @@ _PRIORITY_FIELDS = [
     "PEG Ratio",
 ]
 
+_COMPARISON_FIELDS = [
+    "Revenue (TTM)",
+    "Profit Margin",
+    "Operating Margin",
+    "Debt to Equity",
+    "Current Ratio",
+    "PE Ratio (TTM)",
+    "Forward PE",
+    "PEG Ratio",
+    "Free Cash Flow",
+]
+
 
 def _parse_fundamentals_block(raw_text: str) -> dict[str, str]:
     parsed: dict[str, str] = {}
@@ -58,6 +70,30 @@ def _format_snapshot(ticker: str, raw_text: str, metric_limit: int) -> str:
     lines = [f"### {ticker}"]
     for field, value in _select_metric_items(parsed, metric_limit):
         lines.append(f"- {field}: {value}")
+    return "\n".join(lines)
+
+
+def _build_comparison_table(
+    target_ticker: str,
+    target_raw_text: str,
+    peers: list[str],
+    peer_raw_texts: list[str],
+) -> str:
+    rows: list[tuple[str, dict[str, str]]] = [(target_ticker, _parse_fundamentals_block(target_raw_text))]
+    rows.extend((peer, _parse_fundamentals_block(raw_text)) for peer, raw_text in zip(peers, peer_raw_texts))
+
+    available_fields = [
+        field for field in _COMPARISON_FIELDS if any(parsed.get(field) for _, parsed in rows)
+    ]
+    if not available_fields:
+        return "Comparison table unavailable."
+
+    header = "| Metric | " + " | ".join(ticker for ticker, _ in rows) + " |"
+    separator = "| :--- | " + " | ".join([":---"] * len(rows)) + " |"
+    lines = [header, separator]
+    for field in available_fields:
+        values = [parsed.get(field, "N/A") for _, parsed in rows]
+        lines.append("| " + field + " | " + " | ".join(values) + " |")
     return "\n".join(lines)
 
 
@@ -97,14 +133,34 @@ def build_industry_inputs(
 ) -> dict[str, str | list[str]]:
     target_fundamentals = _cached_fundamentals(ticker, curr_date)
     peers = list(_cached_peer_set(ticker, curr_date, max_peers))
+    peer_raw_texts = [_cached_peer_fundamentals(peer, curr_date) for peer in peers]
     peer_blocks = [
-        _format_snapshot(peer, _cached_peer_fundamentals(peer, curr_date), metric_limit)
-        for peer in peers
+        _format_snapshot(peer, raw_text, metric_limit)
+        for peer, raw_text in zip(peers, peer_raw_texts)
     ]
+    has_peer_coverage = bool(peers)
+    peer_coverage_status = "available" if has_peer_coverage else "unavailable"
+    peer_selection_note = (
+        "Curated peer set: " + ", ".join(peers)
+        if has_peer_coverage
+        else (
+            f"Curated peer set unavailable for {ticker.upper()}.\n"
+            "Required fallback behavior:\n"
+            "- Do not infer, invent, or simulate peers.\n"
+            "- Do not fabricate fundamentals, tables, code, or placeholder datasets.\n"
+            "- Base the report only on the target fundamentals and industry context.\n"
+            "- Explicitly label the peer-relative confidence as low."
+        )
+    )
     return {
         "target_fundamentals": target_fundamentals,
         "target_snapshot": _format_snapshot(ticker, target_fundamentals, metric_limit),
         "peer_tickers": peers,
-        "peer_snapshots": "\n\n".join(peer_blocks) if peer_blocks else "No curated peer set available.",
+        "peer_coverage_status": peer_coverage_status,
+        "peer_selection_note": peer_selection_note,
+        "peer_snapshots": "\n\n".join(peer_blocks) if peer_blocks else "Peer snapshots unavailable.",
+        "comparison_table": _build_comparison_table(ticker, target_fundamentals, peers, peer_raw_texts)
+        if has_peer_coverage
+        else "Comparison table unavailable because no curated peer set is available.",
         "industry_context": _cached_industry_context(ticker, curr_date),
     }
